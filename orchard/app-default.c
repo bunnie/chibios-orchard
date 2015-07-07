@@ -41,7 +41,7 @@ static  const char item2[] = "No";
 static struct OrchardUiContext listUiContext;
 static char partner[GENE_NAMELENGTH];  // name of current sex partner
 
-static uint8_t mode = 0;  // used by the oscope routine
+static uint8_t mode = 1;  // used by the oscope routine
 static uint8_t oscope_running = 0;
 static uint8_t *samples;
 
