@@ -31,7 +31,7 @@
 #include "test-audit.h"
 
 #include "accel.h"
-#include "ble.h"
+//#include "ble.h"
 #include "captouch.h"
 #include "charger.h"
 #include "gpiox.h"
@@ -270,7 +270,7 @@ int main(void)
   ggStart(i2cDriver);
   captouchStart(i2cDriver);
   radioStart(radioDriver, &SPID1);
-  bleStart(bleDriver, &SPID2);
+  //bleStart(bleDriver, &SPID2);
   oledStart(&SPID2);
   ledStart(LED_COUNT, fb, UI_LED_COUNT, ui_fb);
   effectsStart();
@@ -338,8 +338,8 @@ void halt(void) {
   chprintf(stream, "Accelerometer stopped\n\r");
 
   // for now BLE seems broken, leave it alone...
-  bleStop(bleDriver);
-  chprintf(stream, "BLE stopped\n\r");
+  //  bleStop(bleDriver);
+  //  chprintf(stream, "BLE stopped\n\r");
 
   chargerStop();
   chprintf(stream, "Charger stopped\n\r");
