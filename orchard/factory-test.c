@@ -761,6 +761,9 @@ static int orchard_run_tests(struct factory *f) {
 
   int ret;
 
+  ret = writestr(f->serial_fd, "chgcap 4000\r\n");
+  stream_wait_banner(f, f->serial_fd, "ch> ");
+  
   ret = writestr(f->serial_fd, "testall 3\r\n");
   if (ret <= 0)
     return ret;
