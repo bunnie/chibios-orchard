@@ -113,4 +113,4 @@ static void marble_exit(OrchardAppContext *context) {
   (void)context;
 }
 
-orchard_app("marble", marble_init, marble_start, marble_event, marble_exit);
+orchard_app("Marble", marble_init, marble_start, marble_event, marble_exit);
