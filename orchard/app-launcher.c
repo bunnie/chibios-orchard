@@ -38,7 +38,7 @@ static void redraw_list(struct launcher_list *list) {
   uint8_t visible_apps;
   uint8_t app_modulus;
   uint8_t max_list;
-  int32_t ui_timeout;
+  uint32_t ui_timeout;
 
   ui_timeout = (BLINKY_DEFAULT_DELAY - (chVTGetSystemTime() - last_ui_time)) / 1000;
 
