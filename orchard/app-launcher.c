@@ -159,7 +159,7 @@ void launcher_event(OrchardAppContext *context, const OrchardAppEvent *event) {
     redraw_list(list);
   }
 
-  if( ui_timeout <= 0 ) {
+  if( (ui_timeout <= 0) || (ui_timeout > (BLINKY_DEFAULT_DELAY / 1000)) ) {
     led_app = orchardAppByName("Blinkies!");
     if( led_app != NULL )
       orchardAppRun(led_app);
