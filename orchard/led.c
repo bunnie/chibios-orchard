@@ -500,6 +500,7 @@ static void testPatternFB(struct effects_config *config) {
 }
 orchard_effects("safetyPattern", testPatternFB);
 
+#if 0
 static void shootPatternFB(struct effects_config *config) {
   uint8_t *fb = config->hwconfig->fb;
   int count = config->count;
@@ -517,6 +518,7 @@ static void shootPatternFB(struct effects_config *config) {
   }
 }
 orchard_effects("circlestar", shootPatternFB);
+#endif
 
 #define VU_X_PERIOD 3   // number of waves across the entire band
 #define VU_T_PERIOD 2500  // time to complete 2pi rotation, in integer milliseconds
@@ -597,6 +599,7 @@ static void waveRainbowFB(struct effects_config *config) {
 orchard_effects("WaveRainbow", waveRainbowFB);
 #endif
 
+#if 0
 static void directedRainbowFB(struct effects_config *config) {
   uint8_t *fb = config->hwconfig->fb;
   int count = config->count;
@@ -665,6 +668,7 @@ static uint32_t asb_l(int i) {
   return -i;
 }
 orchard_effects("directedRainbow", directedRainbowFB);
+#endif
 
 #define DROP_INT 600
 #define BUMP_TIMEOUT 2300
