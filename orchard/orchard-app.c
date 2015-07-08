@@ -1103,7 +1103,7 @@ void orchardAppTimer(const OrchardAppContext *context,
   chVTSet(&context->instance->timer, US2ST(usecs), timer_do_send_message, NULL);
 }
 
-static THD_WORKING_AREA(waOrchardAppThread, 0x800);
+static THD_WORKING_AREA(waOrchardAppThread, 0xA00); // more stack
 static THD_FUNCTION(orchard_app_thread, arg) {
 
   (void)arg;
