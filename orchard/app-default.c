@@ -132,6 +132,9 @@ static void do_oscope(void) {
   fix16_t real[MIC_SAMPLE_DEPTH];
   fix16_t imag[MIC_SAMPLE_DEPTH];
 
+  if( samples == NULL )
+    return;
+  
   agc( samples );
   
   if ( mode ) {
