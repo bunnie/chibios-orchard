@@ -69,7 +69,7 @@ static void do_charger_watchdog(void) {
   }
 }
 
-static THD_WORKING_AREA(waChargerWatchdogThread, 192);
+static THD_WORKING_AREA(waChargerWatchdogThread, 128);
 static THD_FUNCTION(charger_watchdog_thread, arg) {
   (void)arg;
 

@@ -74,10 +74,10 @@ void cmd_friendsim(BaseSequentialStream *chp, int argc, char *argv[]) {
   (void) argc;
   (void) argv;
 
-  char friendlist[16][GENE_NAMELENGTH];
+  char friendlist[20][GENE_NAMELENGTH];
   uint32_t i;
 
-  for(i = 0; i < 16; i++ ) {
+  for(i = 0; i < 20; i++ ) {
     generateName(friendlist[i]);
   }
   
@@ -87,7 +87,7 @@ void cmd_friendsim(BaseSequentialStream *chp, int argc, char *argv[]) {
     radioSend(radioDriver, RADIO_BROADCAST_ADDRESS, radio_prot_ping,
 	      strlen(friendlist[i]) + 1, friendlist[i]);
     radioRelease(radioDriver);
-    chThdSleepMilliseconds((5000 + rand() % 2000) / 16); // simulate timeouts
+    chThdSleepMilliseconds((5000 + rand() % 2000) / 22); // simulate timeouts
   }
 }
 orchard_command("friendsim", cmd_friendsim);

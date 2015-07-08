@@ -171,10 +171,12 @@ char *friend_add(char *name) {
   for( i = 0; i < MAX_FRIENDS; i++ ) {
     if( friends[i] == NULL ) {
       friends[i] = (char *) chHeapAlloc(NULL, GENE_NAMELENGTH + 2); // space for NULL + metric byte
-      friends[i][0] = FRIENDS_INIT_CREDIT;
-      strncpy(&(friends[i][1]), name, GENE_NAMELENGTH);
-      osalMutexUnlock(&friend_mutex);
-      return friends[i];
+      if( friends[i] != NULL ) {
+	friends[i][0] = FRIENDS_INIT_CREDIT;
+	strncpy(&(friends[i][1]), name, GENE_NAMELENGTH);
+	osalMutexUnlock(&friend_mutex);
+	return friends[i];
+      }
     }
   }
   osalMutexUnlock(&friend_mutex);
@@ -275,6 +277,9 @@ static void radio_ping_received(uint8_t prot, uint8_t src, uint8_t dst,
   friend = friend_lookup((char *) data);
   if( friend == NULL )
     friend = friend_add((char *) data);
+
+  if( friend == NULL ) // we simply can't take any more friends, drop new requests until old ones expire
+    return;
 
   if(friend[0] < FRIENDS_MAX_CREDIT)
     friend[0]++;
@@ -1103,7 +1108,7 @@ void orchardAppTimer(const OrchardAppContext *context,
   chVTSet(&context->instance->timer, US2ST(usecs), timer_do_send_message, NULL);
 }
 
-static THD_WORKING_AREA(waOrchardAppThread, 0xA00); // more stack
+static THD_WORKING_AREA(waOrchardAppThread, 0x900); // more stack
 static THD_FUNCTION(orchard_app_thread, arg) {
 
   (void)arg;

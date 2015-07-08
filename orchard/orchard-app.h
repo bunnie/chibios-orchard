@@ -40,7 +40,7 @@ void friendsLock(void);
 void friendsUnlock(void);
 uint8_t friendCount(void);
 uint8_t getMutationRate(void);
-#define MAX_FRIENDS  50   // max # of friends to track
+#define MAX_FRIENDS  100   // max # of friends to track
 
 typedef struct _OrchardAppContext {
   struct orchard_app_instance *instance;
