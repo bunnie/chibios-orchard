@@ -363,7 +363,7 @@ static void mutate(genome *gamete, uint8_t mutation_rate) {
   
   r = rand();
   if( (r & 0xFF) < mutation_rate ) {
-    gamete->cd_period = mfunc(gamete->cd_period, bits, r);
+    gamete->cd_period = mfunc(gamete->cd_period, bits, r) % 6;
   }
   
   r = rand();
