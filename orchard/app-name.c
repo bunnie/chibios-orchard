@@ -16,8 +16,6 @@ static void redraw_ui(void) {
   coord_t width;
   coord_t height;
   font_t font;
-  const struct genes *family;
-  struct genes newFamily;
 
   orchardGfxStart();
   // draw the title bar
@@ -30,13 +28,6 @@ static void redraw_ui(void) {
   gdispDrawStringBox(0, 0, width, height,
                      tmp, font, Black, justifyCenter);
 
-  family = (const struct genes *) storageGetData(GENE_BLOCK);
-  memcpy(&newFamily, family, sizeof(struct genes));
-  strncpy(newFamily.name, myname, GENE_NAMELENGTH);
-  newFamily.name[GENE_NAMELENGTH - 1] = '\0'; // enforce the null terminator
-  
-  storagePatchData(GENE_BLOCK, (uint32_t *) &newFamily, GENE_OFFSET, sizeof(struct genes));
-
   gdispFlush();
   orchardGfxEnd();
 }
@@ -45,10 +36,21 @@ static void draw_confirmation(void) {
   coord_t width;
   coord_t height;
   font_t font;
-  char tmp[] = "Your name is now:";
-  char tmp2[] = "Press select to continue.";
+  char tmp[32];
+  char tmp2[32];
+  const struct genes *family;
+  struct genes newFamily;
 
   redraw_ui();  // clear the text entry area
+  family = (const struct genes *) storageGetData(GENE_BLOCK);
+
+  if( strlen(myname) < 2 ) {
+    chsnprintf(tmp, sizeof(tmp), "Name too short. Reset to:");
+    strncpy(myname, family->name, GENE_NAMELENGTH); // reset to original name
+  } else {
+    chsnprintf(tmp, sizeof(tmp), "Your name is now:");
+  }
+  chsnprintf(tmp2, sizeof(tmp2), "Press select to continue.");
   
   orchardGfxStart();
   font = gdispOpenFont("fixed_5x8");
@@ -67,6 +69,12 @@ static void draw_confirmation(void) {
   gdispFlush();
   orchardGfxEnd();
   
+  family = (const struct genes *) storageGetData(GENE_BLOCK);
+  memcpy(&newFamily, family, sizeof(struct genes));
+  strncpy(newFamily.name, myname, GENE_NAMELENGTH);
+  newFamily.name[GENE_NAMELENGTH - 1] = '\0'; // enforce the null terminator
+  
+  storagePatchData(GENE_BLOCK, (uint32_t *) &newFamily, GENE_OFFSET, sizeof(struct genes));
 }
 
 static uint32_t name_init(OrchardAppContext *context) {
@@ -78,6 +86,10 @@ static uint32_t name_init(OrchardAppContext *context) {
 
 static void name_start(OrchardAppContext *context) {
   const OrchardUi *textUi;
+  const struct genes *family;
+  
+  family = (const struct genes *) storageGetData(GENE_BLOCK);
+  strncpy(myname, family->name, GENE_NAMELENGTH); // populate myname with an initial value
   
   redraw_ui();
   // all this app does is launch a text entry box and store the name
