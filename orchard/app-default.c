@@ -22,8 +22,8 @@ static uint8_t friend_index = 0;
 static uint8_t numlines = 1;
 static uint8_t friend_total = 0;
 
-#define BUMP_LIMIT 32  // 32 shakes to get to the limit
-#define RETIRE_RATE 100 // retire one bump per "100ms"
+#define BUMP_LIMIT 64  // 32 shakes to get to the limit
+#define RETIRE_RATE 100 // retire one bump per "80ms"
 static uint8_t bump_level = 0;
 
 #define LED_UI_FONT  "fixed_5x8"
