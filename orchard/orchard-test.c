@@ -60,6 +60,8 @@ OrchardTestResult orchardTestRunByName(const char *name, uint32_t test_type) {
 void orchardTestRunAll(BaseSequentialStream *chp, OrchardTestType test_type) {
   const TestRoutine *cur_test;
   OrchardTestResult test_result;
+  char prompt[24];
+  uint32_t auditval;
 
   cur_test = orchard_test_start();
   while(cur_test->test_function) {
@@ -88,6 +90,18 @@ void orchardTestRunAll(BaseSequentialStream *chp, OrchardTestType test_type) {
       }
     }
     cur_test++;
+  }
+  if( test_type == orchardTestInteractive ) {
+    auditval = auditCheck(test_type);
+    if( auditval > 0xFFFF ) {
+      // failure
+      chsnprintf(prompt, sizeof(prompt), "0x%x", auditval);
+      orchardTestPrompt( "FAIL", prompt, -120 );
+    } else {
+      // pass
+      chsnprintf(prompt, sizeof(prompt), "0x%x", auditval);
+      orchardTestPrompt( "TEST DONE", prompt, -120 );
+    }
   }
 }
 
