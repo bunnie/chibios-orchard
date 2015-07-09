@@ -27,7 +27,7 @@
 #include "orchard-shell.h" // for friend testing function
 
 #define SEXTEST 0
-#define SEX_TURNAROUND_TIME 6000 // 6 seconds for sex -- mostly to give sender time to "shake it"
+#define SEX_TURNAROUND_TIME 4000 // 4 seconds for sex -- mostly to give sender time to "shake it"
 
 extern uint8_t sex_running;  // from app-default.c
 extern uint8_t sex_done;

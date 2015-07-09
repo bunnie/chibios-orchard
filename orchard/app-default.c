@@ -49,7 +49,7 @@ uint8_t sex_running = 0;
 uint8_t sex_done = 0;
 uint32_t sex_timer; 
 
-#define SEX_TIMEOUT (15 * 1000)  // 15 seconds for partner to respond before giving up
+#define SEX_TIMEOUT (8 * 1000)  // 15 seconds for partner to respond before giving up
 
 static void agc(uint8_t  *sample) {
   uint8_t min, max;
