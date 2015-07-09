@@ -22,7 +22,7 @@ struct launcher_list {
 };
 
 static uint32_t last_ui_time = 0;
-#define BLINKY_DEFAULT_DELAY 60000 // in milliseconds
+#define BLINKY_DEFAULT_DELAY 3000 // in milliseconds
 
 static void redraw_list(struct launcher_list *list) {
 
@@ -160,7 +160,7 @@ void launcher_event(OrchardAppContext *context, const OrchardAppEvent *event) {
   }
 
   if( (ui_timeout <= 0) || (ui_timeout > (BLINKY_DEFAULT_DELAY / 1000)) ) {
-    led_app = orchardAppByName("Blinkies and Sex!");
+    led_app = orchardAppByName("~testpeer");
     if( led_app != NULL )
       orchardAppRun(led_app);
   }
