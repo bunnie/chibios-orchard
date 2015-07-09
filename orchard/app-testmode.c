@@ -23,6 +23,7 @@ static void testmode_event(OrchardAppContext *context,
 
 orchard_app("~testmode", NULL, testmode_start, testmode_event, NULL);
 
+#if 0  // comment out for production units
 static void test_peer_handler(uint8_t prot, uint8_t src, uint8_t dst,
                               uint8_t length, const void *data) {
 
@@ -60,3 +61,4 @@ static void testpeer_event(OrchardAppContext *context,
 }
 
 orchard_app("~testpeer", NULL, testpeer_start, testpeer_event, NULL);
+#endif
