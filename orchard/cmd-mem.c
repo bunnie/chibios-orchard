@@ -20,19 +20,19 @@
 
 #include "orchard-shell.h"
 
-void cmd_mem(BaseSequentialStream *chp, int argc, char *argv[])
+void cmd_buzz(BaseSequentialStream *chp, int argc, char *argv[])
 {
-  size_t n, size;
+  int addr;
+  
+  addr = strtoul(argv[0], NULL, 0);
 
-  (void)argv;
-  if (argc > 0) {
-    chprintf(chp, "Usage: mem\r\n");
-    return;
+  if( addr ) {
+    palSetPad(GPIOA, 4);
+  } else {
+    palClearPad(GPIOA, 4);
   }
-  n = chHeapStatus(NULL, &size);
-  chprintf(chp, "core free memory : %u bytes\r\n", chCoreGetStatusX());
-  chprintf(chp, "heap fragments   : %u\r\n", n);
-  chprintf(chp, "heap free total  : %u bytes\r\n", size);
+  
 }
 
-orchard_command("mem", cmd_mem);
+orchard_command("buzz", cmd_buzz);
+
