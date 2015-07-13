@@ -127,6 +127,56 @@ int16_t ggVoltage(void) {
   return data;
 }
 
+int16_t ggFullChargeCap(void) {
+  int16_t data;
+  
+  i2cAcquireBus(driver);
+  gg_get( GG_CMD_FCC, &data );
+  i2cReleaseBus(driver);
+
+  return data;
+}
+
+int16_t ggFullAvailableCap(void) {
+  int16_t data;
+  
+  i2cAcquireBus(driver);
+  gg_get( GG_CMD_FULL_CAP, &data );
+  i2cReleaseBus(driver);
+
+  return data;
+}
+
+int16_t ggNomAvailableCap(void) {
+  int16_t data;
+  
+  i2cAcquireBus(driver);
+  gg_get( GG_CMD_NOM_CAP, &data );
+  i2cReleaseBus(driver);
+
+  return data;
+}
+
+uint16_t ggCtlStat(void) {
+  int16_t data;
+  
+  i2cAcquireBus(driver);
+  gg_get( GG_CMD_CNTL, &data );
+  i2cReleaseBus(driver);
+
+  return (uint16_t) data;
+}
+
+uint16_t ggFlags(void) {
+  int16_t flags;
+  
+  i2cAcquireBus(driver);
+  gg_get(GG_CMD_FLAG, &flags);
+  i2cReleaseBus(driver);
+
+  return (uint16_t) flags;
+}
+
 void compute_checksum(uint8_t *blockdata) {
   uint8_t i;
   uint8_t sum = 0;
@@ -138,9 +188,69 @@ void compute_checksum(uint8_t *blockdata) {
   blockdata[32] = 255 - sum;
 }
 
+uint16_t getDesignCapacity(void) {
+  int16_t flags;
+  uint16_t designCapacity;
+  uint8_t  blockdata[33];
+  uint8_t  i;
+
+  i2cAcquireBus(driver);
+  
+  gg_set(GG_CMD_CNTL, GG_CODE_DEVTYPE);
+  gg_get(GG_CMD_CNTL, &flags);
+  chprintf( stream, "Device type: %04x\n\r", flags );
+
+  // unseal the device by writing the unseal command twice
+  gg_set(GG_CMD_CNTL, GG_CODE_UNSEAL);
+  gg_set(GG_CMD_CNTL, GG_CODE_UNSEAL);
+
+  // set configuration update command
+  gg_set(GG_CMD_CNTL, GG_CODE_CFGUPDATE);
+  
+  // confirm cfgupdate mode by polling flags until bit 4 is set; takes up to 1 second
+  do {
+    gg_get(GG_CMD_FLAG, &flags);
+  } while( !(flags & 0x10 ) );
+
+  gg_set(GG_CMD_CNTL, GG_CODE_CTLSTAT);
+  gg_get(GG_CMD_CNTL, &flags);
+  chprintf( stream, "control status: %04x\n\r", flags );
+
+  gg_set_byte(GG_EXT_BLKDATACTL, 0x00);    // enable block data memory control
+  gg_set_byte(GG_EXT_BLKDATACLS, 0x52);    // set data class to 0x52 - state subclass
+
+  gg_set_byte(GG_EXT_BLKDATAOFF, 0x00);    // set the block data offset
+  // data offset is computed by (parameter * 32)
+
+  for( i = 0; i < 33; i++ ) {
+    gg_get_byte( GG_EXT_BLKDATABSE + i, &(blockdata[i]) );
+  }
+
+  designCapacity = blockdata[11] | (blockdata[10] << 8);
+
+  gg_set( GG_CMD_CNTL, GG_CODE_RESET );
+
+  // confirm we're out of update mode, may take up to 1 second
+  do {
+    gg_get(GG_CMD_FLAG, &flags);
+  } while( (flags & 0x10 ) );
+
+  // seal up the gas gauge
+  gg_set( GG_CMD_CNTL, GG_CODE_SEAL ); 
+
+  gg_set(GG_CMD_CNTL, GG_CODE_CTLSTAT);
+  gg_get(GG_CMD_CNTL, &flags);
+  chprintf( stream, "control status: %04x\n\r", flags );
+
+  i2cReleaseBus(driver);
+
+  return designCapacity;
+  
+}
+
 // this function is to be used only once
 // returns the previously recorded design capacity
-uint16_t setDesignCapacity(uint16_t mAh) {
+uint16_t setDesignCapacity(uint16_t mAh, uint16_t mWh) {
   int16_t flags;
   uint16_t designCapacity;
   uint8_t  blockdata[33];
@@ -180,9 +290,13 @@ uint16_t setDesignCapacity(uint16_t mAh) {
 
   designCapacity = blockdata[11] | (blockdata[10] << 8);
   chprintf( stream, "Debug: current design capacity: %dmAh checksum: %02x\n\r", designCapacity, blockdata[32] );
+  designCapacity = blockdata[13] | (blockdata[12] << 8);
+  chprintf( stream, "Debug: current design energy: %dmWh checksum: %02x\n\r", designCapacity, blockdata[32] );
 
   blockdata[11] = mAh & 0xFF;
   blockdata[10] = (mAh >> 8) & 0xFF;
+  blockdata[13] = mWh & 0xFF;
+  blockdata[12] = (mWh >> 8) & 0xFF;
 
   compute_checksum(blockdata);
   

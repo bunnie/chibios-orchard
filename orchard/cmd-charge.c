@@ -166,20 +166,40 @@ orchard_command("chgstat", cmd_chgstat);
 
 void cmd_chgcap(BaseSequentialStream *chp, int argc, char *argv[]) {
   uint16_t capacity;
+  uint16_t energy;
 
-  if( argc != 1 ) {
-    chprintf(chp, "chgcap [capacity] where capacity is in mAh\r\n" );
+  if( argc != 2 ) {
+    chprintf(chp, "chgcap [capacity] [energy] where capacity is in mAh, energy is in mWh\r\n" );
     return;
   }
 
   capacity = strtoul(argv[0], NULL, 0);
+  energy = strtoul(argv[1], NULL, 0);
   
   if( (capacity < 300) || (capacity > 6000) ) {
     chprintf(chp, "Capacity value is suspicious, aborting.\n\r" );
     return;
   }
+
+  if( (energy < 1110) || (energy > 22200) ) {
+    chprintf(chp, "Energy value is suspicious, aborting.\n\r" );
+    return;
+  }
   
-  setDesignCapacity( capacity );
+  setDesignCapacity( capacity, energy );
 }
 
 orchard_command("chgcap", cmd_chgcap);
+
+void cmd_ggstat(BaseSequentialStream *chp, int argc, char *argv[]) {
+  (void) argc;
+  (void) argv;
+
+  chprintf(chp, "Full charge capacity: %dmA\n\r", ggFullChargeCap() );
+  chprintf(chp, "Full available capacity: %dmA\n\r", ggFullAvailableCap() );
+  chprintf(chp, "Nominal available capacity: %dmA\n\r", ggNomAvailableCap() );
+  chprintf(chp, "Gasgauge control status code: %x\n\r", ggCtlStat() );
+  chprintf(chp, "Gasgauge flags: %x\n\r", ggFlags() );
+  // chprintf(chp, "Design capacity: %dmA\n\r", getDesignCapacity() );
+}
+orchard_command("ggstat", cmd_ggstat);

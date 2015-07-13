@@ -4,8 +4,14 @@ int16_t ggAvgCurrent(void);
 int16_t ggAvgPower(void);
 int16_t ggRemainingCapacity(void);
 int16_t ggStateofCharge(void);
+int16_t ggFullChargeCap(void);
+int16_t ggFullAvailableCap(void);
+int16_t ggNomAvailableCap(void);
+uint16_t ggCtlStat(void);
+uint16_t ggFlags(void);
 
-uint16_t setDesignCapacity(uint16_t mAh);
+uint16_t setDesignCapacity(uint16_t mAh, uint16_t mWh);
+uint16_t getDesignCapacity(void);
 
 void ggSetHibernate(void);
 
