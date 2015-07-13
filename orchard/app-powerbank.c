@@ -31,7 +31,7 @@ static void redraw_ui(void) {
   
   // 2nd line left
   gdispDrawStringBox(0, height*2, width, height,
-		     "Press < to exit mode", font, White, justifyLeft);
+		     "Exit to turn off", font, White, justifyLeft);
   
   // 4th line left
   chsnprintf(uiStr, sizeof(uiStr), "Capacity: %d%%", ggStateofCharge());
@@ -91,9 +91,7 @@ static void powerbank_event(OrchardAppContext *context, const OrchardAppEvent *e
 
   if (event->type == keyEvent) {
     if ( (event->key.flags == keyDown) && (event->key.code == keyLeft) ) {
-      gpioxSetPadMode(GPIOX, usbOutPad, GPIOX_OUT_PUSHPULL | GPIOX_VAL_HIGH);
-      setShift(orig_shift);
-      orchardAppExit();
+      // don't do anything, this is a mis-feature
     } else if ((event->key.flags == keyDown) && (event->key.code == keySelect)) {
       // do we do anything on select?? probs not
     }
