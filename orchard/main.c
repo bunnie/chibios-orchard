@@ -301,6 +301,10 @@ int main(void)
   configStart();
   
   orchardTestRunAll(stream, orchardTestPoweron);
+
+  ggCheckUpdate(); // checks that gg has correct capacity setting
+  // note, capacity setting is reset if system is discharged to the point
+  // of battery internal safety cutoff...so we have to check every time we boot
   
   // eventually get rid of this
   chprintf(stream, "User flash start: 0x%x  user flash end: 0x%x  length: 0x%x\r\n",

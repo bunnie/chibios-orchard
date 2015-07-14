@@ -12,6 +12,7 @@ uint16_t ggFlags(void);
 
 uint16_t setDesignCapacity(uint16_t mAh, uint16_t mWh);
 uint16_t getDesignCapacity(void);
+void ggCheckUpdate(void);
 
 void ggSetHibernate(void);
 
