@@ -185,7 +185,7 @@ void charging_event(OrchardAppContext *context, const OrchardAppEvent *event) {
   
   if (event->type == keyEvent) {
     if ( (event->key.flags == keyDown) && (event->key.code == keyLeft) ) {
-      orchardAppExit();
+      // orchardAppExit();  this is probably a misfeature
     } else if ((event->key.flags == keyDown) && (event->key.code == keyCW)) {
       override = (override + 1) % chargerOverrideTotal;
 
