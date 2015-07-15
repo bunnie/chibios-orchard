@@ -40,7 +40,7 @@ void cmd_shipmode(BaseSequentialStream *chp, int argc, char *argv[])
   chprintf(chp, "Battery will disconnect and system will power off\r\n");
   chprintf(chp, "You must disconnect/reconnect power via microUSB to reconnect battery\r\n");
   
-  ggSetHibernate(); // optional, seems to do nothing
+  // ggSetHibernate(); // optional, seems to do nothing
   chargerShipMode();
 }
 
@@ -200,6 +200,11 @@ void cmd_ggstat(BaseSequentialStream *chp, int argc, char *argv[]) {
   chprintf(chp, "Nominal available capacity: %dmA\n\r", ggNomAvailableCap() );
   chprintf(chp, "Gasgauge control status code: %x\n\r", ggCtlStat() );
   chprintf(chp, "Gasgauge flags: %x\n\r", ggFlags() );
+  chprintf(chp, "Remaining capacity unfiltered: %dmA\n\r", ggRemainingUnfiltered() );
+  chprintf(chp, "Remaining capacity filtered: %dmA\n\r", ggCapFiltered() );
+  chprintf(chp, "Full charge capacity unfiltered: %dmA\n\r", ggFullChargeCapUnfiltered() );
+  chprintf(chp, "Full charge capacity filtered: %dmA\n\r", ggFullChargeCapFiltered() );
+  chprintf(chp, "State of charge unfiltered: %d%%\n\r", ggStateofChargeUnfiltered() );
   // chprintf(chp, "Design capacity: %dmA\n\r", getDesignCapacity() );
 }
 orchard_command("ggstat", cmd_ggstat);

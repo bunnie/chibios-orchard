@@ -109,6 +109,29 @@ int16_t ggRemainingCapacity(void) {
 }
 
 int16_t ggStateofCharge(void) {
+  int16_t soc;
+  int16_t soc_unfilt;
+  
+  i2cAcquireBus(driver);
+  gg_get( GG_CMD_SOC, &soc );
+  gg_get( GG_CMD_SOC_UN, &soc_unfilt );
+  i2cReleaseBus(driver);
+
+  // compute overrides to give some indication of SoC before filtering
+  // kicks in
+  if( soc == 0 ) {
+    if( soc_unfilt > 0 )
+      return soc_unfilt;
+  }
+  if( soc == 100 ) {
+    if( soc_unfilt < 100 )
+      return soc_unfilt;
+  }
+
+  return soc;
+}
+
+int16_t ggStateofChargeUnpatch(void) {
   int16_t data;
   
   i2cAcquireBus(driver);
@@ -153,6 +176,56 @@ int16_t ggNomAvailableCap(void) {
   
   i2cAcquireBus(driver);
   gg_get( GG_CMD_NOM_CAP, &data );
+  i2cReleaseBus(driver);
+
+  return data;
+}
+
+int16_t ggRemainingUnfiltered(void) {
+  int16_t data;
+  
+  i2cAcquireBus(driver);
+  gg_get( GG_CMD_RM_UN, &data );
+  i2cReleaseBus(driver);
+
+  return data;
+}
+
+int16_t ggCapFiltered(void) {
+  int16_t data;
+  
+  i2cAcquireBus(driver);
+  gg_get( GG_CMD_CAP, &data );
+  i2cReleaseBus(driver);
+
+  return data;
+}
+
+int16_t ggFullChargeCapUnfiltered(void) {
+  int16_t data;
+  
+  i2cAcquireBus(driver);
+  gg_get( GG_CMD_FCC_UN, &data );
+  i2cReleaseBus(driver);
+
+  return data;
+}
+
+int16_t ggFullChargeCapFiltered(void) {
+  int16_t data;
+  
+  i2cAcquireBus(driver);
+  gg_get( GG_CMD_FCC_F, &data );
+  i2cReleaseBus(driver);
+
+  return data;
+}
+
+int16_t ggStateofChargeUnfiltered(void) {
+  int16_t data;
+  
+  i2cAcquireBus(driver);
+  gg_get( GG_CMD_SOC_UN, &data );
   i2cReleaseBus(driver);
 
   return data;
@@ -205,9 +278,6 @@ uint16_t getDesignCapacity(void) {
   gg_set(GG_CMD_CNTL, GG_CODE_UNSEAL);
   gg_set(GG_CMD_CNTL, GG_CODE_UNSEAL);
 
-  // set configuration update command
-  gg_set(GG_CMD_CNTL, GG_CODE_CFGUPDATE);
-  
   // confirm cfgupdate mode by polling flags until bit 4 is set; takes up to 1 second
   do {
     gg_get(GG_CMD_FLAG, &flags);
@@ -228,13 +298,6 @@ uint16_t getDesignCapacity(void) {
   }
 
   designCapacity = blockdata[11] | (blockdata[10] << 8);
-
-  gg_set( GG_CMD_CNTL, GG_CODE_RESET );
-
-  // confirm we're out of update mode, may take up to 1 second
-  do {
-    gg_get(GG_CMD_FLAG, &flags);
-  } while( (flags & 0x10 ) );
 
   // seal up the gas gauge
   gg_set( GG_CMD_CNTL, GG_CODE_SEAL ); 
@@ -307,7 +370,8 @@ uint16_t setDesignCapacity(uint16_t mAh, uint16_t mWh) {
   }
   chprintf( stream, "Debug: new design capacity: %dmAh checksum: %02x\n\r", mAh, blockdata[32]);
 
-  gg_set( GG_CMD_CNTL, GG_CODE_RESET );
+  //gg_set( GG_CMD_CNTL, GG_CODE_RESET );
+  gg_set( GG_CMD_CNTL, GG_CODE_EXIT_CFGUPDATE );
 
   // confirm we're out of update mode, may take up to 1 second
   do {
@@ -344,49 +408,6 @@ void ggCheckUpdate(void) {
   gg_set(GG_CMD_CNTL, GG_CODE_UNSEAL);
   gg_set(GG_CMD_CNTL, GG_CODE_UNSEAL);
 
-  // set configuration update command
-  gg_set(GG_CMD_CNTL, GG_CODE_CFGUPDATE);
-  i2cReleaseBus(driver);
-  
-  timeout = 0;
-  // confirm cfgupdate mode by polling flags until bit 4 is set; takes up to 1 second
-  do {
-    starttime = chVTGetSystemTime();
-    do {
-      i2cAcquireBus(driver);
-      gg_get(GG_CMD_FLAG, &flags);
-      i2cReleaseBus(driver);
-      curtime = chVTGetSystemTime();
-    } while( !(flags & 0x10) && (curtime < (starttime + 1300)) );
-    if( curtime >= (starttime + 1300)) {
-      timeout++;
-      chprintf(stream, "ggCheckUpdate timeout going to update mode: %d tries\n\r", timeout);
-      // try to unseal aagain
-      i2cAcquireBus(driver);
-      gg_set( GG_CMD_CNTL, GG_CODE_RESET );
-      i2cReleaseBus(driver);
-
-      // this basically happens only if you reset the device twice rapidly in sequence.
-      // so it's pretty rare
-      chsnprintf(uistr, sizeof(uistr), "attempt %d of 3", timeout);
-      orchardTestPrompt("gasgauge timeout...", uistr, -5);
-      
-      i2cAcquireBus(driver);
-      // unseal the device by writing the unseal command twice
-      gg_set(GG_CMD_CNTL, GG_CODE_UNSEAL);
-      gg_set(GG_CMD_CNTL, GG_CODE_UNSEAL);
-      
-      // set configuration update command
-      gg_set(GG_CMD_CNTL, GG_CODE_CFGUPDATE);
-      i2cReleaseBus(driver);
-    }
-  } while( !(flags & 0x10) && (timeout < 3) );
-  if( timeout >= 3 ) {
-    chprintf( stream, "ggCheckUpdate ERROR: Couldn't unseal gasgauge and enter update mode. Aborting.\n\r" );
-    return;
-  }
-
-  i2cAcquireBus(driver);
   gg_set_byte(GG_EXT_BLKDATACTL, 0x00);    // enable block data memory control
   gg_set_byte(GG_EXT_BLKDATACLS, 0x52);    // set data class to 0x52 - state subclass
 
@@ -402,7 +423,64 @@ void ggCheckUpdate(void) {
   chprintf( stream, "ggUpdate: current design capacity: %dmAh checksum: %02x\n\r", designCapacity, blockdata[32] );
   designEnergy = blockdata[13] | (blockdata[12] << 8);
   chprintf( stream, "ggUpdate: current design energy: %dmWh checksum: %02x\n\r", designEnergy, blockdata[32] );
+
   if( (designCapacity != GG_BM_CAPACITY) || (designEnergy != GG_BM_ENERGY) ) {
+    // enter update mode
+    // set configuration update command
+    i2cAcquireBus(driver);
+    gg_set(GG_CMD_CNTL, GG_CODE_CFGUPDATE);
+    i2cReleaseBus(driver);
+  
+    timeout = 0;
+    // confirm cfgupdate mode by polling flags until bit 4 is set; takes up to 1 second
+    do {
+      starttime = chVTGetSystemTime();
+      do {
+	i2cAcquireBus(driver);
+	gg_get(GG_CMD_FLAG, &flags);
+	i2cReleaseBus(driver);
+	curtime = chVTGetSystemTime();
+      } while( !(flags & 0x10) && (curtime < (starttime + 1300)) );
+      if( curtime >= (starttime + 1300)) {
+	timeout++;
+	chprintf(stream, "ggCheckUpdate timeout going to update mode: %d tries\n\r", timeout);
+	// try to unseal aagain
+	//i2cAcquireBus(driver);
+	//gg_set( GG_CMD_CNTL, GG_CODE_RESET ); 
+	//i2cReleaseBus(driver);
+
+	// this basically happens only if you reset the device twice rapidly in sequence.
+	// you can only unseal after 4 seconds from sealing
+	chsnprintf(uistr, sizeof(uistr), "attempt %d of 3", timeout);
+	orchardTestPrompt("gasgauge timeout...", uistr, -5);
+      
+	i2cAcquireBus(driver);
+	// unseal the device by writing the unseal command twice
+	gg_set(GG_CMD_CNTL, GG_CODE_UNSEAL);
+	gg_set(GG_CMD_CNTL, GG_CODE_UNSEAL);
+	
+	// set configuration update command
+	gg_set(GG_CMD_CNTL, GG_CODE_CFGUPDATE);
+	i2cReleaseBus(driver);
+      }
+    } while( !(flags & 0x10) && (timeout < 3) );
+    if( timeout >= 3 ) {
+      chprintf( stream, "ggCheckUpdate ERROR: Couldn't unseal gasgauge and enter update mode. Aborting.\n\r" );
+      return;
+    }
+    
+    i2cAcquireBus(driver);
+    gg_set_byte(GG_EXT_BLKDATACTL, 0x00);    // enable block data memory control
+    gg_set_byte(GG_EXT_BLKDATACLS, 0x52);    // set data class to 0x52 - state subclass
+    
+    gg_set_byte(GG_EXT_BLKDATAOFF, 0x00);    // set the block data offset
+    // data offset is computed by (parameter * 32)
+    
+    for( i = 0; i < 33; i++ ) {
+      gg_get_byte( GG_EXT_BLKDATABSE + i, &(blockdata[i]) );
+    }
+    i2cReleaseBus(driver);
+    
     // fix the capacity and energy settings...
     designCapacity = GG_BM_CAPACITY;
     designEnergy = GG_BM_ENERGY;
@@ -422,11 +500,19 @@ void ggCheckUpdate(void) {
     i2cReleaseBus(driver);
     chprintf( stream, "ggUpdate: updated design capacity: %dmAh energy: %dmWh checksum: %02x\n\r", designCapacity, designEnergy, blockdata[32]);
   } else {
-    chprintf( stream, "ggUpdate: Seems we are already updated, skipping update...\n\r" );
+    chprintf( stream, "ggUpdate: Seems we are already updated, skipping update & sealing...\n\r" );
+    i2cAcquireBus(driver);
+    // seal up the gas gauge
+    gg_set( GG_CMD_CNTL, GG_CODE_SEAL ); 
+    i2cReleaseBus(driver);
+    return;
   }
   
+  // if we got here, our configuration was updated
   i2cAcquireBus(driver);
-  gg_set( GG_CMD_CNTL, GG_CODE_RESET );
+  //gg_set( GG_CMD_CNTL, GG_CODE_RESET );
+  gg_set( GG_CMD_CNTL, GG_CODE_EXIT_CFGUPDATE );
+  // this forces an OCV measurement and resimulation to calibrate the gasgauge
   i2cReleaseBus(driver);
 
   timeout = 0;
@@ -442,11 +528,11 @@ void ggCheckUpdate(void) {
     if( curtime >= (starttime + 1500)) {
       timeout++;
       
-      i2cAcquireBus(driver);
-      gg_set( GG_CMD_CNTL, GG_CODE_RESET );
-      i2cReleaseBus(driver);
+      //i2cAcquireBus(driver);  // can't do this because it'll reset the config data too
+      //gg_set( GG_CMD_CNTL, GG_CODE_RESET );
+      //i2cReleaseBus(driver);
     }
-  } while( (flags & 0x10) && (timeout < 4) );
+  } while( (flags & 0x10) && (timeout < 1) );
   if( timeout >= 4 ) {
     chprintf( stream, "ggCheckUpdate ERROR: Couldn't reset gasgauge. Sealing anyways.\n\r" );
   }

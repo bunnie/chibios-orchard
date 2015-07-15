@@ -112,6 +112,7 @@ void chargerStart(I2CDriver *i2cp) {
 // battery while shipping or in storage. The only way out of this is to plug
 // power into the microUSB port, which re-engages power to the whole system.
 msg_t chargerShipMode(void) {
+  chprintf(stream, "Setting shipmode, prepare for shutdown!.\n\r" );
   shipIntent = CHG_SHIPMODE;  // this is a one-way door
   
   return MSG_OK;
