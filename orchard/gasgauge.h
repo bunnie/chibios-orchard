@@ -11,7 +11,7 @@ int16_t ggNomAvailableCap(void);
 uint16_t ggCtlStat(void);
 uint16_t ggFlags(void);
 
-uint16_t setDesignCapacity(uint16_t mAh, uint16_t mWh);
+uint16_t setDesignCapacity(uint16_t mAh, uint16_t mWh, uint16_t termV, uint16_t taper);
 uint16_t getDesignCapacity(void);
 void ggCheckUpdate(void);
 

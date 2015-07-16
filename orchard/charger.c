@@ -92,11 +92,11 @@ void chargerStart(I2CDriver *i2cp) {
   driver = i2cp;
 
   // 0x6 0xb0    -- 6 hour fast charger time limit, 1A ILIM, no TS, DPM 4.2V
-  // 0x4 0x19    -- charge current at 300mA, term sense at 50mA
+  // 0x4 0x1A    -- charge current at 300mA, term sense at 100mA
   // 0x1 0x2c    -- 500mA charging, enable stat and charge term
   // 0x2 0x64    -- set 4.0V as charging target
   charger_set(CHG_REG_SAFETY, 0xb0);
-  charger_set(CHG_REG_CURRENT, 0x19);
+  charger_set(CHG_REG_CURRENT, 0x1A);
   charger_set(CHG_REG_CTL, 0x2c);
   charger_set(CHG_REG_BATTV, 0x64);
 

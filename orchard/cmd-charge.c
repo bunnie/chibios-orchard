@@ -167,14 +167,18 @@ orchard_command("chgstat", cmd_chgstat);
 void cmd_chgcap(BaseSequentialStream *chp, int argc, char *argv[]) {
   uint16_t capacity;
   uint16_t energy;
+  uint16_t termV;
+  uint16_t taper;
 
-  if( argc != 2 ) {
-    chprintf(chp, "chgcap [capacity] [energy] where capacity is in mAh, energy is in mWh\r\n" );
+  if( argc != 4 ) {
+    chprintf(chp, "chgcap [capacity] [energy] [termV] [taper] where capacity is in mAh, energy is in mWh, termination voltage in mV, taper rate in 0.1Hr\r\n" );
     return;
   }
 
   capacity = strtoul(argv[0], NULL, 0);
   energy = strtoul(argv[1], NULL, 0);
+  termV = strtoul(argv[2], NULL, 0);
+  taper = strtoul(argv[3], NULL, 0);
   
   if( (capacity < 300) || (capacity > 6000) ) {
     chprintf(chp, "Capacity value is suspicious, aborting.\n\r" );
@@ -186,7 +190,7 @@ void cmd_chgcap(BaseSequentialStream *chp, int argc, char *argv[]) {
     return;
   }
   
-  setDesignCapacity( capacity, energy );
+  setDesignCapacity( capacity, energy, termV, taper );
 }
 
 orchard_command("chgcap", cmd_chgcap);
