@@ -724,7 +724,9 @@ static int orchard_program(struct factory *f) {
   if (ret < 0)
     return -1;
   else if (ret > 0) {
-    finfo(f, "CPU is locked, doing a mass erase\n");
+    finfo(f, "CPU is locked, aborting\n");
+    return -1;
+    // finfo(f, "CPU is locked, doing a mass erase\n");
     // kinetis_mass_erase(f);  // never do a mass erase in field upgrades
   }
   else
@@ -842,8 +844,8 @@ try_again:
 
   ret = cpu_running(f);
   if (ret == 0) {
-    ferr(f, "CPU doesn't appear to be running, trying a complete reset\n");
-    // kinetis_mass_erase(f);  // don't do a mass_erase in field upgrades
+    ferr(f, "CPU doesn't appear to be running, let's try this again\n");
+    //kinetis_mass_erase(f);
     ret = -EAGAIN;
     goto cleanup;
   }
