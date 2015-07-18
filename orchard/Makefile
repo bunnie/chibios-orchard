@@ -273,9 +273,13 @@ include $(RULESPATH)/rules.mk
 gitversion.c: $(CHIBIOS)/.git/HEAD $(CHIBIOS)/.git/index
 	echo "const char *gitversion = \"$(shell git rev-parse HEAD)\";" > $@
 
-POST_MAKE_ALL_RULE_HOOK: build/factory-test
+POST_MAKE_ALL_RULE_HOOK: build/factory-test build/field-upgrade
 
 build/factory-test: factory-test.c
 	$(CC) factory-test.c -o build/factory-test -Wall -g
 
+build/field-upgrae: field-upgrade.c
+	$(CC) field-upgrade.c -o build/field-upgrade -Wall -g
+
 factory-test.c:
+field-upgrade.c:
