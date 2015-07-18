@@ -725,7 +725,7 @@ static int orchard_program(struct factory *f) {
     return -1;
   else if (ret > 0) {
     finfo(f, "CPU is locked, doing a mass erase\n");
-    kinetis_mass_erase(f);
+    // kinetis_mass_erase(f);  // never do a mass erase in field upgrades
   }
   else
     finfo(f, "CPU is unlocked\n");
@@ -843,7 +843,7 @@ try_again:
   ret = cpu_running(f);
   if (ret == 0) {
     ferr(f, "CPU doesn't appear to be running, trying a complete reset\n");
-    kinetis_mass_erase(f);
+    // kinetis_mass_erase(f);  // don't do a mass_erase in field upgrades
     ret = -EAGAIN;
     goto cleanup;
   }
@@ -851,33 +851,7 @@ try_again:
     ferr(f, "Unable to determine if CPU is running\n");
   }
 
-  if (f->serial_fd == -1) {
-    finfo(f, "No serial port specified, skipping tests\n");
-    goto cleanup;
-  }
-
-  ret = stream_wait_banner(f, f->serial_fd, "ch> ");
-  if (ret)
-    goto cleanup;
-
-  if (f->cfg.specific_tests) {
-    int i;
-    for (i = 0; i < f->cfg.specific_tests; i++) {
-      finfo(f, "Running specific test '%s'\n", f->cfg.specific_test_names[i]);
-      ret = orchard_run_test(f, f->cfg.specific_test_names[i]);
-      if (ret)
-        goto cleanup;
-    }
-  }
-
-  if (f->cfg.do_tests) {
-    finfo(f, "Running tests\n");
-    ret = orchard_run_tests(f);
-    if (ret)
-      goto cleanup;
-  }
-  else
-    finfo(f, "Skipping board testing step\n");
+  finfo(f, "Skipping board testing step\n");
 
 cleanup:
   openocd_stop(f);
