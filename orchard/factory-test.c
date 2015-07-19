@@ -343,7 +343,7 @@ static int strbegins(const char *str, const char *begin) {
 static int openocd_write_image(struct factory *f, const char *elf) {
   char buf[256];
 
-  snprintf(buf, sizeof(buf) - 1, "ocd_flash write_image %s", elf);
+  snprintf(buf, sizeof(buf) - 1, "ocd_flash write_image erase %s", elf);
   openocd_send(f, buf);
 
   memset(buf, 0, sizeof(buf));
