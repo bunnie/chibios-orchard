@@ -302,7 +302,7 @@ int main(void)
   
   orchardTestRunAll(stream, orchardTestPoweron);
 
-  ggCheckUpdate(); // checks that gg has correct capacity setting
+  ggCheckUpdate(0); // checks that gg has correct capacity setting, without force update (param = 0)
   // note, capacity setting is reset if system is discharged to the point
   // of battery internal safety cutoff...so we have to check every time we boot
   

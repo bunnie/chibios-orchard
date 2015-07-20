@@ -410,7 +410,7 @@ uint16_t setDesignCapacity(uint16_t mAh, uint16_t mWh, uint16_t termV, uint16_t 
 #define GG_BM_QMAX_MIN 1700   // roughly 10% of original capacity -- we're def. not doing well
 #define GG_BM_QMAX_NOM 16384  // default qmax
 
-void ggCheckUpdate(void) {
+void ggCheckUpdate(uint8_t forceUpdate) {
   int16_t flags;
   uint16_t designCapacity, designEnergy, termV, taper;
   int16_t qmax;
@@ -452,7 +452,7 @@ void ggCheckUpdate(void) {
 
   // don't consider qmax is resetting params -- I don't trust the docs on default qmax value...
   if( (designCapacity != GG_BM_CAPACITY) || (designEnergy != GG_BM_ENERGY) ||
-      (termV != GG_BM_TERMV) || (taper != GG_BM_TAPER) ) {
+      (termV != GG_BM_TERMV) || (taper != GG_BM_TAPER) || forceUpdate) {
     // enter update mode
     // set configuration update command
     i2cAcquireBus(driver);
@@ -718,7 +718,10 @@ void cmd_ggfix(BaseSequentialStream *chp, int argc, char *argv[]) {
   int16_t patchval;
   uint8_t  blockdata[33];
   int i;
+
+  ggCheckUpdate(1); // call with force update
   
+#if 0
   i2cAcquireBus(driver);
   // unseal the device by writing the unseal command twice
   gg_set(GG_CMD_CNTL, GG_CODE_UNSEAL);
@@ -799,7 +802,8 @@ void cmd_ggfix(BaseSequentialStream *chp, int argc, char *argv[]) {
   // seal up the gas gauge
   gg_set( GG_CMD_CNTL, GG_CODE_SEAL ); 
   i2cReleaseBus(driver);
-  
+
+#endif
 }
 orchard_command("ggfix", cmd_ggfix);
 
