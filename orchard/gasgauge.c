@@ -568,6 +568,41 @@ void ggCheckUpdate(uint8_t forceUpdate) {
     }
     i2cReleaseBus(driver);
     chprintf( stream, "ggUpdate: also restored cal data to default\n\r");
+
+    // also update/fix QMAX change limits and simulation parameters
+    i2cAcquireBus(driver);
+    gg_set_byte(GG_EXT_BLKDATACTL, 0x00);    // enable block data memory control
+    gg_set_byte(GG_EXT_BLKDATACLS, 80);    // data class 80 - IT Cfg
+    
+    gg_set_byte(GG_EXT_BLKDATAOFF, 0x01);    // set the block data offset
+    // data offset is computed by (parameter * 32)
+    
+    for( i = 0; i < 33; i++ ) {
+      gg_get_byte( GG_EXT_BLKDATABSE + i, &(blockdata[i]) );
+    }
+    i2cReleaseBus(driver);
+
+    blockdata[45-32] = 100; // allow a larger qmax change
+    blockdata[46-32] = 50; // allow a larger %age of design capacity change in qmax
+    blockdata[47-32] = 150; // seems our batteries have larger capacities than printed on the case
+
+    patchval = 200; // use a 200mA discharge rate for simulation
+    blockdata[53-32] = patchval & 0xFF;
+    blockdata[52-32] = (patchval >> 8) & 0xFF;
+
+    patchval = 740; // use a 740 mWh discharge power for simulation
+    blockdata[55-32] = patchval & 0xFF;
+    blockdata[54-32] = (patchval >> 8) & 0xFF;
+    
+    compute_checksum(blockdata);
+    
+    i2cAcquireBus(driver);
+    // commit the new data and checksum
+    for( i = 0; i < 33; i++ ) {
+      gg_set_byte( GG_EXT_BLKDATABSE + i, blockdata[i] );
+    }
+    i2cReleaseBus(driver);
+    chprintf( stream, "ggUpdate: also updated delta QMAX and sim parameters\n\r");
     
   } else {
     chprintf( stream, "ggUpdate: Seems we are already updated, skipping update & sealing...\n\r" );
@@ -620,11 +655,21 @@ void printBlock(uint8_t *block) {
   for( i = 0; i < 32; i += 2 ) {
     if( (i % 8) == 0 )
       chprintf( stream, "\n\r%02x: ", i );
-    chprintf( stream, "%5d ", (block[i] << 8) | block[i+1] );
+    chprintf( stream, "%6d ", (int16_t) (block[i] << 8) | block[i+1] );
   }
   chprintf( stream, "%02x\n\r", block[32] ); // checksum
 }
 
+void printBlock8(uint8_t *block) {
+  int i;
+  for( i = 0; i < 32; i += 1 ) {
+    if( (i % 8) == 0 )
+      chprintf( stream, "\n\r%02x: ", i );
+    chprintf( stream, "%3d ", (uint8_t) block[i] );
+  }
+  chprintf( stream, "%02x\n\r", block[32] ); // checksum
+}
+ 
 void dumpSubClass(uint8_t subclass, uint8_t offset, uint8_t *blockdata) {
   int i;
   int16_t stat;
@@ -669,11 +714,15 @@ void cmd_ggdump(BaseSequentialStream *chp, int argc, char *argv[]) {
   chprintf(stream, "OpConfig: %x\n\r", blockdata[0] << 8 | blockdata[1] );
   chprintf(stream, "OpConfigB: %x\n\r", blockdata[2] << 8 | blockdata[3] );
 
-#if 0   // these match across gauge
+#if 1   // these match across gauge
   chprintf(stream, "\n\rIT Cfg:" );
   for( i = 0; i < 3; i++ ) {
     dumpSubClass(80, i, blockdata);
     printBlock(blockdata);
+    if( i == 1 ) {
+      chprintf(stream, "\n\rIT Cfg block 1 (offset 32) as bytes:" );
+      printBlock8(blockdata);
+    }
   }
 #endif
 
