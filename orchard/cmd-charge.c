@@ -151,7 +151,7 @@ void cmd_chgstat(BaseSequentialStream *chp, int argc, char *argv[])
       break;
 
     default:
-      chprintf(chp, "Charge is ina n unknown state (program error)\r\n" );
+      chprintf(chp, "Charge is in an unknown state (program error)\r\n" );
     }
   }
 

@@ -11,6 +11,7 @@
 #include "test-audit.h"
 #include "analog.h"    // for test
 #include "gasgauge.h"  // for test
+#include "orchard-shell.h"
 
 static I2CDriver *driver;
 static chargerIntent chgIntent = CHG_IDLE;
@@ -91,14 +92,15 @@ void chargerStart(I2CDriver *i2cp) {
 
   driver = i2cp;
 
-  // 0x6 0xb0    -- 6 hour fast charger time limit, 1A ILIM, no TS, DPM 4.2V
-  // 0x4 0x1A    -- charge current at 300mA, term sense at 100mA
+  // 0x6 0xd0    -- 9 hour fast charger time limit, 1A ILIM, no TS, DPM 4.2V, timer slowing allowed
+  // 9 hour needed because 4000mAh will take ~8-9 hours to charge with a 500mA port
+  // 0x4 0x2C    -- charge current at 500mA, term sense at 200mA = 0.05C @ 4000mAh
   // 0x1 0x2c    -- 500mA charging, enable stat and charge term
-  // 0x2 0x64    -- set 4.0V as charging target
-  charger_set(CHG_REG_SAFETY, 0xb0);
-  charger_set(CHG_REG_CURRENT, 0x1A);
+  // 0x2 0x84    -- set 4.18V as charging target (4.16-3.5)/0.02 = 33, 33 << 2 = 0x84
+  charger_set(CHG_REG_SAFETY, 0xd0);
+  charger_set(CHG_REG_CURRENT, 0x2C);
   charger_set(CHG_REG_CTL, 0x2c);
-  charger_set(CHG_REG_BATTV, 0x64);
+  charger_set(CHG_REG_BATTV, 0x84);
 
   // ... and let's overwrite those with the proper callbacks
   chargerSetTargetVoltage(4200);
@@ -311,6 +313,71 @@ void chargerSetTargetCurrent(uint16_t current) {
   data |= code << 3;
   charger_set(CHG_REG_CURRENT, data);
 }
+
+void cmd_chgsafety(BaseSequentialStream *chp, int argc, char *argv[]) {
+  (void)argc;
+  (void)argv;
+
+  uint8_t data;
+  uint8_t field;
+
+  charger_get(CHG_REG_SAFETY, &data);
+
+  if( data & 0x80 )
+    chprintf(chp, "Timer slowing allowed in adverse conditions\n\r" );
+  else
+    chprintf(chp, "Timer always runs at fixed rate\n\r" );
+
+  field = (data >> 5) & 0x3;
+  chprintf( chp, "Safety timer limit: " );
+  switch(field) {
+  case 0:
+    chprintf(chp, "2b00 - 1.25 minute\n\r");
+    break;
+  case 1:
+    chprintf(chp, "2b01 - 6 hour\n\r");
+    break;
+  case 2:
+    chprintf(chp, "2b10 - 9 hour\n\r");
+    break;
+  case 3:
+    chprintf(chp, "2b11 - safety timers disabled\n\r");
+    break;
+  default:
+    chprintf(chp, "omg wtf internal error\n\r");
+  }
+
+  if( data & 0x10 )
+    chprintf(chp, "boost ILIM 1A\n\r");
+  else
+    chprintf(chp, "boost ILIM 500mA\n\r");
+
+  if( data & 0x8 )
+    chprintf(chp, "TS enabled\n\r");
+  else
+    chprintf(chp, "TS disabled\n\r");
+
+  chprintf(chp, "TS fault code: %x\n\r", (data >> 1) & 0x3);
+
+  chprintf(chp, "VINDPM_OFF: ");
+  if( data & 1 )
+    chprintf(chp, "10.1V\n\r" );
+  else
+    chprintf(chp, "4.2V\n\r" );
+
+  charger_get(CHG_REG_DPM, &data);
+  if( data & 0x80 )
+    chprintf(chp, "Min sys voltage mode active\n\r" );
+  else
+    chprintf(chp, "Min sys voltage mode not active\n\r" );
+
+  if( data & 0x40 )
+    chprintf(chp, "VIN-DPM mode active -- charger or cable does not have sufficient ampacity for this board\n\r" );
+  else
+    chprintf(chp, "VIN-DPM mode is not active\n\r" );
+}
+orchard_command("chgsafety", cmd_chgsafety);
+
 
 #define TEST_CHG_TIMEOUT 10000
 #define TEST_CHG_THRESH 100  // threshold, in mA, for a test to pass charging
