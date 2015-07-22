@@ -611,8 +611,8 @@ static void handle_charge_state(eventid_t id) {
       effectsSetPattern(effectsNameLookup("safetyPattern"));
 
     // limit brightness to guarantee ~2 hours runtime in safety mode
-    if( getShift() < 3 )
-      setShift(3);
+    if( getShift() < 2 )
+      setShift(2);
   }
 }
 
