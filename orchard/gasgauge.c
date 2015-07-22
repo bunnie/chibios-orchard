@@ -121,6 +121,7 @@ int16_t ggStateofCharge(void) {
 
   // compute overrides to give some indication of SoC before filtering
   // kicks in
+#if 0
   if( soc == 0 ) {
     if( soc_unfilt > 0 )
       return soc_unfilt;
@@ -129,7 +130,8 @@ int16_t ggStateofCharge(void) {
     if( soc_unfilt < 100 )
       return soc_unfilt;
   }
-
+#endif
+  
   return soc;
 }
 
@@ -759,100 +761,87 @@ void cmd_ggdump(BaseSequentialStream *chp, int argc, char *argv[]) {
 }
 orchard_command("ggdump", cmd_ggdump);
 
-void cmd_ggfix(BaseSequentialStream *chp, int argc, char *argv[]) {
-  (void) chp;
-  (void) argc;
-  (void) argv;
-  int16_t flags;
-  int16_t patchval;
+void cmd_ggsearch(BaseSequentialStream *chp, int argc, char *argv[]) {
+  uint16_t subclass;
+  uint8_t block;
   uint8_t  blockdata[33];
+  uint16_t value;
   int i;
-
-  ggCheckUpdate(1); // call with force update
   
-#if 0
+  if( argc != 1 ) {
+    chprintf(chp, "Usage: ggsearch [value]\n\r");
+  }
+
+  value = strtoul(argv[0], NULL, 0);
+
   i2cAcquireBus(driver);
   // unseal the device by writing the unseal command twice
   gg_set(GG_CMD_CNTL, GG_CODE_UNSEAL);
   gg_set(GG_CMD_CNTL, GG_CODE_UNSEAL);
-
-  gg_set(GG_CMD_CNTL, GG_CODE_CFGUPDATE);
   i2cReleaseBus(driver);
 
-  do {
-    i2cAcquireBus(driver);
-    gg_get(GG_CMD_FLAG, &flags);
-    i2cReleaseBus(driver);
-  } while( !(flags & 0x10) );
-
-  // update qmax
-  i2cAcquireBus(driver);
-  gg_set_byte(GG_EXT_BLKDATACTL, 0x00);    // enable block data memory control
-  gg_set_byte(GG_EXT_BLKDATACLS, 0x52);    // set data class to 0x52 - state subclass
-  
-  gg_set_byte(GG_EXT_BLKDATAOFF, 0x00);    // set the block data offset
-  // data offset is computed by (parameter * 32)
-    
-  for( i = 0; i < 33; i++ ) {
-    gg_get_byte( GG_EXT_BLKDATABSE + i, &(blockdata[i]) );
+  for( subclass = 0; subclass < 256; subclass++ ) {
+    if( (subclass % 32) == 0 )
+      chprintf(chp, "\r\n");
+    chprintf(chp, ".");
+    for( block = 0; block < 5; block++ ) {
+      dumpSubClass((uint8_t) subclass, block, blockdata);
+      for( i = 0; i < 31; i++ ) {
+	if( (blockdata[i] == ((value >> 8) & 0xFF)) &&
+	    (blockdata[i+1] == (value & 0xFF)) ) {
+	  chprintf(chp, "\n\rMatch at subclass %d block %d offset %d\n\r",
+		    subclass, block, i );
+	}
+      }
+    }
   }
-  i2cReleaseBus(driver);
-
-  patchval = 16384; // restore default qmax
-  blockdata[1] = patchval & 0xFF;
-  blockdata[0] = (patchval >> 8) & 0xFF;
-  compute_checksum(blockdata);
-
-  i2cAcquireBus(driver);
-  // commit the new data and checksum
-  for( i = 0; i < 33; i++ ) {
-    gg_set_byte( GG_EXT_BLKDATABSE + i, blockdata[i] );
-  }
-  i2cReleaseBus(driver);
-
-  // update CC cal data:
-  i2cAcquireBus(driver);
-  gg_set_byte(GG_EXT_BLKDATACTL, 0x00);    // enable block data memory control
-  gg_set_byte(GG_EXT_BLKDATACLS, 105);    // data class 105 -- cc cal
-  
-  gg_set_byte(GG_EXT_BLKDATAOFF, 0x00);    // set the block data offset
-  // data offset is computed by (parameter * 32)
-    
-  for( i = 0; i < 33; i++ ) {
-    gg_get_byte( GG_EXT_BLKDATABSE + i, &(blockdata[i]) );
-  }
-  i2cReleaseBus(driver);
-
-  patchval = 0; // restore default cc offset
-  blockdata[1] = patchval & 0xFF;
-  blockdata[0] = (patchval >> 8) & 0xFF;
-  patchval = 2982; // restore default cal temp
-  blockdata[3] = patchval & 0xFF;
-  blockdata[2] = (patchval >> 8) & 0xFF;
-  
-  compute_checksum(blockdata);
-
-  i2cAcquireBus(driver);
-  // commit the new data and checksum
-  for( i = 0; i < 33; i++ ) {
-    gg_set_byte( GG_EXT_BLKDATABSE + i, blockdata[i] );
-  }
-  i2cReleaseBus(driver);
-  
-
-  // if we got here, our configuration was updated
-  i2cAcquireBus(driver);
-  gg_set( GG_CMD_CNTL, GG_CODE_RESET );
-  //gg_set( GG_CMD_CNTL, GG_CODE_EXIT_CFGUPDATE );
-  // this forces an OCV measurement and resimulation to calibrate the gasgauge
-  i2cReleaseBus(driver);
 
   i2cAcquireBus(driver);
   // seal up the gas gauge
   gg_set( GG_CMD_CNTL, GG_CODE_SEAL ); 
   i2cReleaseBus(driver);
+}
+orchard_command("ggsearch", cmd_ggsearch);
 
-#endif
+void cmd_ggpeek(BaseSequentialStream *chp, int argc, char *argv[]) {
+  uint8_t subclass;
+  uint8_t block;
+  uint8_t  blockdata[33];
+  
+  if( argc != 2 ) {
+    chprintf(chp, "Usage: ggpeek [subclass] [block]\n\r");
+  }
+
+  subclass = strtoul(argv[0], NULL, 0);
+  block = strtoul(argv[1], NULL, 0);
+
+  i2cAcquireBus(driver);
+  // unseal the device by writing the unseal command twice
+  gg_set(GG_CMD_CNTL, GG_CODE_UNSEAL);
+  gg_set(GG_CMD_CNTL, GG_CODE_UNSEAL);
+  i2cReleaseBus(driver);
+
+  dumpSubClass(subclass, block, blockdata);
+
+  chprintf(chp, "\n\rsub %d block %d as int16:", subclass, block);
+  printBlock(blockdata);
+  chprintf(chp, "\n\rsub %d block %d as uint8:", subclass, block);
+  printBlock8(blockdata);
+
+  i2cAcquireBus(driver);
+  // seal up the gas gauge
+  gg_set( GG_CMD_CNTL, GG_CODE_SEAL ); 
+  i2cReleaseBus(driver);
+}
+orchard_command("ggpeek", cmd_ggpeek);
+ 
+void cmd_ggfix(BaseSequentialStream *chp, int argc, char *argv[]) {
+  (void) chp;
+  (void) argc;
+  (void) argv;
+  
+  ggCheckUpdate(1); // call with force update
+  
 }
 orchard_command("ggfix", cmd_ggfix);
 
