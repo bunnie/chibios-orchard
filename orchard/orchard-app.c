@@ -609,7 +609,10 @@ static void handle_charge_state(eventid_t id) {
   if( ggVoltage() < SAFETY_THRESH ) {
     if( effectsGetPattern() != effectsNameLookup("safetyPattern") )
       effectsSetPattern(effectsNameLookup("safetyPattern"));
-    setShift(3);
+
+    // limit brightness to guarantee ~2 hours runtime in safety mode
+    if( getShift() < 3 )
+      setShift(3);
   }
 }
 
