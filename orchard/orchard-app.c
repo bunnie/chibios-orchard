@@ -70,6 +70,9 @@ static unsigned long track_time;
 static virtual_timer_t chargecheck_timer;
 static event_source_t chargecheck_timeout;
 #define CHARGECHECK_INTERVAL 1000 // time between checking state of USB pins
+// 3.3V (3300mV) is threshold for OLED failure; 50mV for margin
+#define SAFETY_THRESH  3350     // threshold to go into safety mode
+#define SHIPMODE_THRESH  3250   // threshold to go into ship mode
 
 static virtual_timer_t ping_timer;
 static event_source_t ping_timeout;
@@ -599,8 +602,14 @@ static void handle_charge_state(eventid_t id) {
   configLazyFlush();
   
   // check if battery is too low, and shut down if it is
-  if( ggVoltage() < 3250 ) {  // 3.3V (3300mV) is threshold for OLED failure; 50mV for margin
+  if( ggVoltage() < SHIPMODE_THRESH ) {  
     chargerShipMode();  // requires plugging in to re-active battery
+  }
+
+  if( ggVoltage() < SAFETY_THRESH ) {
+    if( effectsGetPattern() != effectsNameLookup("safetyPattern") )
+      effectsSetPattern(effectsNameLookup("safetyPattern"));
+    setShift(3);
   }
 }
 
