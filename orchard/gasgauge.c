@@ -14,6 +14,8 @@
 
 #include "orchard-shell.h"
 
+void cmd_ggdump(BaseSequentialStream *chp, int argc, char *argv[]);
+
 static I2CDriver *driver;
 
 static void gg_set(uint8_t cmdcode, int16_t val) {
@@ -650,6 +652,8 @@ void ggCheckUpdate(uint8_t forceUpdate) {
     // seal up the gas gauge
     gg_set( GG_CMD_CNTL, GG_CODE_SEAL ); 
     i2cReleaseBus(driver);
+
+    cmd_ggdump(stream, 0, NULL);  // call this to get out of "board cal mode"
     return;
   }
   
