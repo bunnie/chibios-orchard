@@ -662,6 +662,16 @@ void printBlock(uint8_t *block) {
   chprintf( stream, "%02x\n\r", block[32] ); // checksum
 }
 
+void printBlockOdd(uint8_t *block) {
+  int i;
+  for( i = 1; i < 32; i += 2 ) {
+    if( (i % 8) == 1 )
+      chprintf( stream, "\n\r%02x: ", i );
+    chprintf( stream, "%6d ", (int16_t) (block[i] << 8) | block[i+1] );
+  }
+  chprintf( stream, "%02x\n\r", block[32] ); // checksum
+}
+
 void printBlock8(uint8_t *block) {
   int i;
   for( i = 0; i < 32; i += 1 ) {
@@ -735,7 +745,11 @@ void cmd_ggdump(BaseSequentialStream *chp, int argc, char *argv[]) {
   chprintf(stream, "\n\rState:" );
   for( i = 0; i < 2; i++ ) {
     dumpSubClass(82, i, blockdata);
-    printBlock(blockdata);
+    if( i == 0 )
+      printBlock(blockdata);
+    if( i == 1 )
+      printBlockOdd(blockdata);
+      
   }
 
   chprintf(stream, "\n\rR_a RAM:" );
