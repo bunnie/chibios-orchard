@@ -405,7 +405,7 @@ uint16_t setDesignCapacity(uint16_t mAh, uint16_t mWh, uint16_t termV, uint16_t 
 
 #define GG_BM_CAPACITY 4000   // 4000 mAh
 #define GG_BM_ENERGY 14800    // 4000 mAh * 3.7V = 14800 mWh
-#define GG_BM_TERMV  3250     // 3.25V stop voltage
+#define GG_BM_TERMV  3000     // 3.00V stop voltage -- manual says "abs min"
 #define GG_BM_TAPER  440      // set for 100mA charge term + 10% tol
 
 #define GG_BM_QMAX_MAX 25000  // roughly 50% over nominal max charge
