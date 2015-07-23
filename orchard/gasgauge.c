@@ -406,7 +406,9 @@ uint16_t setDesignCapacity(uint16_t mAh, uint16_t mWh, uint16_t termV, uint16_t 
 #define GG_BM_CAPACITY 4000   // 4000 mAh
 #define GG_BM_ENERGY 14800    // 4000 mAh * 3.7V = 14800 mWh
 #define GG_BM_TERMV  3000     // 3.00V stop voltage -- manual says "abs min"
-#define GG_BM_TAPER  440      // set for 100mA charge term + 10% tol
+#define GG_BM_TAPER  173      // set for 200mA charge term + 10% tol
+// per quickstart taper rate = design capacity / (0.1 * taper current)
+// taper current = 200mA * 10%. so, 4000 / (0.1 * 230) = 173
 
 #define GG_BM_QMAX_MAX 25000  // roughly 50% over nominal max charge
 #define GG_BM_QMAX_MIN 1700   // roughly 10% of original capacity -- we're def. not doing well
@@ -606,7 +608,43 @@ void ggCheckUpdate(uint8_t forceUpdate) {
     i2cReleaseBus(driver);
     chprintf( stream, "ggUpdate: also updated delta QMAX and sim parameters\n\r");
     
-  } else {
+    // also pre-load avg current run/power #s and delta voltage
+    i2cAcquireBus(driver);
+    gg_set_byte(GG_EXT_BLKDATACTL, 0x00);    // enable block data memory control
+    gg_set_byte(GG_EXT_BLKDATACLS, 82);    // data class 80 - IT Cfg
+    
+    gg_set_byte(GG_EXT_BLKDATAOFF, 0x01);    // set the block data offset
+    // data offset is computed by (parameter * 32)
+    
+    for( i = 0; i < 33; i++ ) {
+      gg_get_byte( GG_EXT_BLKDATABSE + i, &(blockdata[i]) );
+    }
+    i2cReleaseBus(driver);
+
+    patchval = 2; // use a 2mV deltaV
+    blockdata[40-32] = patchval & 0xFF;
+    blockdata[39-32] = (patchval >> 8) & 0xFF;
+
+    // -125mAh average discharge = 4000/(-125 * 0.1) = -320
+    patchval = -320;
+    blockdata[36-32] = patchval & 0xFF;
+    blockdata[35-32] = (patchval >> 8) & 0xFF;
+
+    // power is ratiometric as well, so same patchval as I
+    patchval = -320;
+    blockdata[38-32] = patchval & 0xFF;
+    blockdata[37-32] = (patchval >> 8) & 0xFF;
+    
+    compute_checksum(blockdata);
+    
+    i2cAcquireBus(driver);
+    // commit the new data and checksum
+    for( i = 0; i < 33; i++ ) {
+      gg_set_byte( GG_EXT_BLKDATABSE + i, blockdata[i] );
+    }
+    i2cReleaseBus(driver);
+    chprintf( stream, "ggUpdate: also updated avg I/P/deltaV params\n\r");
+} else {
     chprintf( stream, "ggUpdate: Seems we are already updated, skipping update & sealing...\n\r" );
     i2cAcquireBus(driver);
     // seal up the gas gauge
