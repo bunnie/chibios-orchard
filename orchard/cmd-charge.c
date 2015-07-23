@@ -198,12 +198,59 @@ orchard_command("chgcap", cmd_chgcap);
 void cmd_ggstat(BaseSequentialStream *chp, int argc, char *argv[]) {
   (void) argc;
   (void) argv;
+  uint16_t stat;
 
   chprintf(chp, "Full charge capacity: %dmA\n\r", ggFullChargeCap() );
   chprintf(chp, "Full available capacity: %dmA\n\r", ggFullAvailableCap() );
   chprintf(chp, "Nominal available capacity: %dmA\n\r", ggNomAvailableCap() );
-  chprintf(chp, "Gasgauge control status code: %x\n\r", ggCtlStat() );
+  stat = ggCtlStat();
+  chprintf(chp, "Gasgauge control status code: %x\n\r", stat );
+  if( stat & 0x100 )
+    chprintf( chp, " Resistance updated\n\r" );
+  if( stat & 0x200 )
+    chprintf( chp, " Qmax updated\n\r" );
+  if( stat & 0x80 )
+    chprintf( chp, " Init completed\n\r" );
+  if( stat & 0x4 )
+    chprintf( chp, " Ra updates disabled\n\r" );
+  if( stat & 0x2 )
+    chprintf( chp, " Voltages OK for Qmax updates\n\r" );
+  if( stat & 0x8 )
+    chprintf( chp, " Using constant-power model\n\r" );
+  if( stat & 0x10 )
+    chprintf( chp, " Gg is sleeping\n\r" );
+  if( stat & 0x40 )
+    chprintf( chp, " Gg is hibernating \n\r" );
+  if( stat & 0x4000 )
+    chprintf( chp, " Gg did a watchdog reset\n\r" );
+  if( stat & 0x2000 )
+    chprintf( chp, " Gg is sealed\n\r" );
+  if( stat & 0x1000 )
+    chprintf( chp, " Calmode active\n\r" );
+  if( stat & 0x800 )
+    chprintf( chp, " Coulomb counter cal active\n\r" );
+  if( stat & 0x400 )
+    chprintf( chp, " board cal mode active\n\r" );
+  stat = ggFlags();
   chprintf(chp, "Gasgauge flags: %x\n\r", ggFlags() );
+  if( stat & 0x200 )
+    chprintf( chp, " Full charge detected\n\r" );
+  if( stat & 0x100 )
+    chprintf( chp, " Fast charging allowed\n\r" );
+  if( stat & 0x80 )
+    chprintf( chp, " OCV measurement taken\n\r" );
+  if( stat & 0x20 )
+    chprintf( chp, " POR has occurred. Host must reload gg.\n\r" );
+  if( stat & 0x10 )
+    chprintf( chp, " Gg in config update mode\n\r" );
+  if( stat & 0x8 )
+    chprintf( chp, " Battery insertion detected.\n\r" );
+  if( stat & 0x4 )
+    chprintf( chp, " SOC1 set threshold\n\r" );
+  if( stat & 0x2 )
+    chprintf( chp, " SOCF set threshold\n\r" );
+  if( stat & 0x1 )
+    chprintf( chp, " Discharging detected\n\r" );
   chprintf(chp, "Remaining capacity unfiltered: %dmA\n\r", ggRemainingUnfiltered() );
   chprintf(chp, "Remaining capacity filtered: %dmA\n\r", ggCapFiltered() );
   chprintf(chp, "Full charge capacity unfiltered: %dmA\n\r", ggFullChargeCapUnfiltered() );
