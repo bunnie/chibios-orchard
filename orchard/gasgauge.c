@@ -297,6 +297,7 @@ uint16_t getDesignCapacity(void) {
   gg_set_byte(GG_EXT_BLKDATACLS, 0x52);    // set data class to 0x52 - state subclass
 
   gg_set_byte(GG_EXT_BLKDATAOFF, 0x00);    // set the block data offset
+  chThdSleepMilliseconds(1); // give time for the block to load 
   // data offset is computed by (parameter * 32)
 
   for( i = 0; i < 33; i++ ) {
@@ -352,6 +353,7 @@ uint16_t setDesignCapacity(uint16_t mAh, uint16_t mWh, uint16_t termV, uint16_t 
   gg_set_byte(GG_EXT_BLKDATACLS, 0x52);    // set data class to 0x52 - state subclass
 
   gg_set_byte(GG_EXT_BLKDATAOFF, 0x00);    // set the block data offset
+  chThdSleepMilliseconds(1); // give time for the block to load 
   // data offset is computed by (parameter * 32)
 
   for( i = 0; i < 33; i++ ) {
@@ -405,12 +407,41 @@ uint16_t setDesignCapacity(uint16_t mAh, uint16_t mWh, uint16_t termV, uint16_t 
   
 }
 
+void dumpSubClass(uint8_t subclass, uint8_t offset, uint8_t *blockdata) {
+  int i;
+  int16_t stat;
+
+  // check that we're unsealed -- it's the caller's resposibility
+  i2cAcquireBus(driver);
+  gg_set(GG_CMD_CNTL, GG_CODE_CTLSTAT);
+  gg_get(GG_CMD_CNTL, &stat);
+  if( (stat & 0x2000) ) {
+    chprintf( stream, "gasgauge is sealed, can't proceed.\n\r" );
+  }
+  i2cReleaseBus(driver);
+    
+  i2cAcquireBus(driver);
+  gg_set_byte(GG_EXT_BLKDATACTL, 0x00);    // enable block data memory control
+  gg_set_byte(GG_EXT_BLKDATACLS, subclass);  
+
+  gg_set_byte(GG_EXT_BLKDATAOFF, offset);    // set the block data offset
+  chThdSleepMilliseconds(3); // give time for the block to load 
+
+  for( i = 0; i < 33; i++ ) {
+    gg_get_byte( GG_EXT_BLKDATABSE + i, &(blockdata[i]) );
+  }
+  i2cReleaseBus(driver);
+  
+  return;
+}
+
 #define GG_BM_CAPACITY 4000   // 4000 mAh
 #define GG_BM_ENERGY 14800    // 4000 mAh * 3.7V = 14800 mWh
 #define GG_BM_TERMV  3000     // 3.00V stop voltage -- manual says "abs min"
-#define GG_BM_TAPER  173      // set for 200mA charge term + 10% tol
+#define GG_BM_TAPER  105      // set for a shy less than 400mA charge term
 // per quickstart taper rate = design capacity / (0.1 * taper current)
-// taper current = 200mA * 10%. so, 4000 / (0.1 * 230) = 173
+// taper current = 300mA * 15%. so, 4000 / (0.1 * 345) = 114
+// set for 400mA as taper rate. Counting on power supply 
 
 #define GG_BM_QMAX_MAX 25000  // roughly 50% over nominal max charge
 #define GG_BM_QMAX_MIN 1700   // roughly 10% of original capacity -- we're def. not doing well
@@ -436,6 +467,7 @@ void ggCheckUpdate(uint8_t forceUpdate) {
   gg_set_byte(GG_EXT_BLKDATACLS, 0x52);    // set data class to 0x52 - state subclass
 
   gg_set_byte(GG_EXT_BLKDATAOFF, 0x00);    // set the block data offset
+  chThdSleepMilliseconds(1); // give time for the block to load 
   // data offset is computed by (parameter * 32)
 
   for( i = 0; i < 33; i++ ) {
@@ -503,19 +535,9 @@ void ggCheckUpdate(uint8_t forceUpdate) {
       return;
     }
     
-    i2cAcquireBus(driver);
-    gg_set_byte(GG_EXT_BLKDATACTL, 0x00);    // enable block data memory control
-    gg_set_byte(GG_EXT_BLKDATACLS, 0x52);    // set data class to 0x52 - state subclass
+    /////////////// fix the capacity and energy settings...
+    dumpSubClass(0x52, 0, blockdata);  // subclass 82
     
-    gg_set_byte(GG_EXT_BLKDATAOFF, 0x00);    // set the block data offset
-    // data offset is computed by (parameter * 32)
-    
-    for( i = 0; i < 33; i++ ) {
-      gg_get_byte( GG_EXT_BLKDATABSE + i, &(blockdata[i]) );
-    }
-    i2cReleaseBus(driver);
-    
-    // fix the capacity and energy settings...
     designCapacity = GG_BM_CAPACITY;
     designEnergy = GG_BM_ENERGY;
     termV = GG_BM_TERMV;
@@ -545,18 +567,8 @@ void ggCheckUpdate(uint8_t forceUpdate) {
     i2cReleaseBus(driver);
     chprintf( stream, "ggUpdate: updated design capacity: %dmAh energy: %dmWh checksum: %02x\n\r", designCapacity, designEnergy, blockdata[32]);
 
-    // also restore CAL data, because it's probably off if capacity was set wrong...
-    i2cAcquireBus(driver);
-    gg_set_byte(GG_EXT_BLKDATACTL, 0x00);    // enable block data memory control
-    gg_set_byte(GG_EXT_BLKDATACLS, 105);    // data class 105 -- cc cal
-    
-    gg_set_byte(GG_EXT_BLKDATAOFF, 0x00);    // set the block data offset
-    // data offset is computed by (parameter * 32)
-    
-    for( i = 0; i < 33; i++ ) {
-      gg_get_byte( GG_EXT_BLKDATABSE + i, &(blockdata[i]) );
-    }
-    i2cReleaseBus(driver);
+    ////////// also restore CAL data, because it's probably off if capacity was set wrong...
+    dumpSubClass(105, 0, blockdata); // cc cal
 
     patchval = 0; // restore default cc offset
     blockdata[1] = patchval & 0xFF;
@@ -575,18 +587,8 @@ void ggCheckUpdate(uint8_t forceUpdate) {
     i2cReleaseBus(driver);
     chprintf( stream, "ggUpdate: also restored cal data to default\n\r");
 
-    // also update/fix QMAX change limits and simulation parameters
-    i2cAcquireBus(driver);
-    gg_set_byte(GG_EXT_BLKDATACTL, 0x00);    // enable block data memory control
-    gg_set_byte(GG_EXT_BLKDATACLS, 80);    // data class 80 - IT Cfg
-    
-    gg_set_byte(GG_EXT_BLKDATAOFF, 0x01);    // set the block data offset
-    // data offset is computed by (parameter * 32)
-    
-    for( i = 0; i < 33; i++ ) {
-      gg_get_byte( GG_EXT_BLKDATABSE + i, &(blockdata[i]) );
-    }
-    i2cReleaseBus(driver);
+    ///////////// also update/fix QMAX change limits and simulation parameters
+    dumpSubClass(80, 0, blockdata); // data class 80 - IT Cfg
 
     blockdata[45-32] = 100; // allow a larger qmax change
     blockdata[46-32] = 50; // allow a larger %age of design capacity change in qmax
@@ -610,18 +612,8 @@ void ggCheckUpdate(uint8_t forceUpdate) {
     i2cReleaseBus(driver);
     chprintf( stream, "ggUpdate: also updated delta QMAX and sim parameters\n\r");
     
-    // also pre-load avg current run/power #s and delta voltage
-    i2cAcquireBus(driver);
-    gg_set_byte(GG_EXT_BLKDATACTL, 0x00);    // enable block data memory control
-    gg_set_byte(GG_EXT_BLKDATACLS, 82);    // data class 80 - IT Cfg
-    
-    gg_set_byte(GG_EXT_BLKDATAOFF, 0x01);    // set the block data offset
-    // data offset is computed by (parameter * 32)
-    
-    for( i = 0; i < 33; i++ ) {
-      gg_get_byte( GG_EXT_BLKDATABSE + i, &(blockdata[i]) );
-    }
-    i2cReleaseBus(driver);
+    ////////////// also pre-load avg current run/power #s and delta voltage
+    dumpSubClass(80, 1, blockdata); // data class 80 - IT Cfg, offset 1
 
     patchval = 2; // use a 2mV deltaV
     blockdata[40-32] = patchval & 0xFF;
@@ -646,6 +638,39 @@ void ggCheckUpdate(uint8_t forceUpdate) {
     }
     i2cReleaseBus(driver);
     chprintf( stream, "ggUpdate: also updated avg I/P/deltaV params\n\r");
+
+    ////////////// also set current thresholds
+    dumpSubClass(81, 0, blockdata); // data class 81 - current thresholds
+
+    // discharge threshold = 100 mA
+    // 4000 / (100 * 0.1) = 400
+    patchval = 400;
+    blockdata[1] = patchval & 0xFF;
+    blockdata[0] = (patchval >> 8) & 0xFF;
+    
+    // charge threshold = 300 mA
+    // 4000 / (300 * 0.1) = 133
+    patchval = 133;
+    blockdata[3] = patchval & 0xFF;
+    blockdata[2] = (patchval >> 8) & 0xFF;
+
+    // quit current = 50 mA
+    // 4000 / (50 * 0.1) = 800
+    patchval = 800;
+    blockdata[5] = patchval & 0xFF;
+    blockdata[4] = (patchval >> 8) & 0xFF;
+
+    compute_checksum(blockdata);
+    
+    i2cAcquireBus(driver);
+    // commit the new data and checksum
+    for( i = 0; i < 33; i++ ) {
+      gg_set_byte( GG_EXT_BLKDATABSE + i, blockdata[i] );
+    }
+    i2cReleaseBus(driver);
+    chprintf( stream, "ggUpdate: also updated current thresholds\n\r");
+    
+    
 } else {
     chprintf( stream, "ggUpdate: Seems we are already updated, skipping update & sealing...\n\r" );
     i2cAcquireBus(driver);
@@ -724,39 +749,12 @@ void printBlock8(uint8_t *block) {
   chprintf( stream, "%02x\n\r", block[32] ); // checksum
 }
  
-void dumpSubClass(uint8_t subclass, uint8_t offset, uint8_t *blockdata) {
-  int i;
-  int16_t stat;
-
-  // check that we're unsealed -- it's the caller's resposibility
-  i2cAcquireBus(driver);
-  gg_set(GG_CMD_CNTL, GG_CODE_CTLSTAT);
-  gg_get(GG_CMD_CNTL, &stat);
-  if( (stat & 0x2000) ) {
-    chprintf( stream, "gasgauge is sealed, can't proceed.\n\r" );
-  }
-  i2cReleaseBus(driver);
-    
-  i2cAcquireBus(driver);
-  gg_set_byte(GG_EXT_BLKDATACTL, 0x00);    // enable block data memory control
-  gg_set_byte(GG_EXT_BLKDATACLS, subclass);  
-
-  gg_set_byte(GG_EXT_BLKDATAOFF, offset);    // set the block data offset
-
-  for( i = 0; i < 33; i++ ) {
-    gg_get_byte( GG_EXT_BLKDATABSE + i, &(blockdata[i]) );
-  }
-  i2cReleaseBus(driver);
-  
-  return;
-}
-
 void cmd_ggdump(BaseSequentialStream *chp, int argc, char *argv[]) {
   (void) chp;
   (void) argc;
   (void) argv;
-  uint8_t  blockdata[33];
   uint8_t  i;
+  uint8_t  blockdata[33];
   
   i2cAcquireBus(driver);
   // unseal the device by writing the unseal command twice
@@ -768,11 +766,16 @@ void cmd_ggdump(BaseSequentialStream *chp, int argc, char *argv[]) {
   chprintf(stream, "OpConfig: %x\n\r", blockdata[0] << 8 | blockdata[1] );
   chprintf(stream, "OpConfigB: %x\n\r", blockdata[2] << 8 | blockdata[3] );
 
+  dumpSubClass(36, 0, blockdata);
+  chprintf(stream, "Charge termination" );
+  printBlock8(blockdata);
+  
 #if 1   // these match across gauge
   chprintf(stream, "\n\rIT Cfg:" );
   for( i = 0; i < 3; i++ ) {
     dumpSubClass(80, i, blockdata);
-    printBlock(blockdata);
+    if( i != 1 )
+      printBlock(blockdata);
     if( i == 1 ) {
       chprintf(stream, "\n\rIT Cfg block 1 (offset 32) as bytes:" );
       printBlock8(blockdata);
