@@ -419,7 +419,7 @@ OrchardTestResult test_charger(const char *my_name, OrchardTestType test_type) {
     
     // we should now be plugged in
     orchardTestPrompt("detecting", "charger...", 0);
-    chThdSleepMilliseconds(GG_UPDATE_INTERVAL_MS); // wait for gg to update
+    chThdSleepMilliseconds(GG_UPDATE_INTERVAL_MS * 3); // wait for gg to update
     usbStatus = analogReadUsbStatus();
     if( (usbStatus == usbStat500) || (usbStatus == usbStat1500) ) {
       current = ggAvgCurrent();
@@ -435,7 +435,7 @@ OrchardTestResult test_charger(const char *my_name, OrchardTestType test_type) {
       orchardTestPrompt("charge test fail", "charger ID fail", 0);
     }
       
-    chThdSleepMilliseconds(GG_UPDATE_INTERVAL_MS);
+    chThdSleepMilliseconds(GG_UPDATE_INTERVAL_MS * 3);
     
     orchardTestPrompt("unplug USB", "to proceed", 0);
     starttime = chVTGetSystemTime();
@@ -449,7 +449,7 @@ OrchardTestResult test_charger(const char *my_name, OrchardTestType test_type) {
     }
 
     orchardTestPrompt("detecting", "discharge...", 0);
-    chThdSleepMilliseconds(GG_UPDATE_INTERVAL_MS);
+    chThdSleepMilliseconds(GG_UPDATE_INTERVAL_MS * 3);
 
     current = ggAvgCurrent();
     if( current > TEST_CHG_DTHRESH ) { // positive, or a less negative number than required
