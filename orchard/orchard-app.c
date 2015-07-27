@@ -602,7 +602,8 @@ static void handle_charge_state(eventid_t id) {
   configLazyFlush();
   
   // check if battery is too low, and shut down if it is
-  if( ggVoltage() < SHIPMODE_THRESH ) {  
+  // but only if we're not plugged in to a charger
+  if( (ggVoltage() < SHIPMODE_THRESH) && (usbStatus == usbStatNC) ) {  
     chargerShipMode();  // requires plugging in to re-active battery
   }
 
