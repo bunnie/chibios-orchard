@@ -446,10 +446,11 @@ void dumpSubClass(uint8_t subclass, uint8_t offset, uint8_t *blockdata) {
 #define GG_BM_QMAX_MAX 25000  // roughly 50% over nominal max charge
 #define GG_BM_QMAX_MIN 1700   // roughly 10% of original capacity -- we're def. not doing well
 #define GG_BM_QMAX_NOM 16384  // default qmax
+#define GG_BM_NOMV 3700  // design nominal voltage
 
 void ggCheckUpdate(uint8_t forceUpdate) {
   int16_t flags;
-  uint16_t designCapacity, designEnergy, termV, taper;
+  uint16_t designCapacity, designEnergy, termV, taper, nomv;
   int16_t qmax;
   uint8_t  blockdata[33];
   uint8_t  i;
@@ -513,9 +514,13 @@ void ggCheckUpdate(uint8_t forceUpdate) {
   qmax = blockdata[1] | (blockdata[0] << 8);
   chprintf( stream, "ggUpdate: Qmax: %d/16384 of design cap\n\r", qmax );
 
+  dumpSubClass(48, 0, blockdata); // data class 48 - "data"
+  nomv = blockdata[1] | (blockdata[0] << 8);
+  chprintf( stream, "ggUpdate: nomV: %dmV\n\r", nomv );
+
   // don't consider qmax is resetting params -- I don't trust the docs on default qmax value...
   if( (designCapacity != GG_BM_CAPACITY) || (designEnergy != GG_BM_ENERGY) ||
-      (termV != GG_BM_TERMV) || (taper != GG_BM_TAPER) || forceUpdate) {
+      (termV != GG_BM_TERMV) || (taper != GG_BM_TAPER) || forceUpdate || (nomv != GG_BM_NOMV)) {
     // enter update mode
     // set configuration update command
     i2cAcquireBus(driver);
@@ -619,11 +624,11 @@ void ggCheckUpdate(uint8_t forceUpdate) {
     blockdata[46-32] = 50; // allow a larger %age of design capacity change in qmax
     blockdata[47-32] = 150; // seems our batteries have larger capacities than printed on the case
 
-    patchval = -200; // use a 200mA discharge rate for simulation
+    patchval = -200; // use a -200mA discharge rate for simulation
     blockdata[53-32] = patchval & 0xFF;
     blockdata[52-32] = (patchval >> 8) & 0xFF;
 
-    patchval = -740; // use a 740 mWh discharge power for simulation 
+    patchval = -740; // use a -740 mWh discharge power for simulation 
     blockdata[55-32] = patchval & 0xFF;
     blockdata[54-32] = (patchval >> 8) & 0xFF;
     
@@ -695,7 +700,22 @@ void ggCheckUpdate(uint8_t forceUpdate) {
     i2cReleaseBus(driver);
     chprintf( stream, "ggUpdate: also updated current thresholds\n\r");
     
+    ////////////// also set nominal design voltage
+    dumpSubClass(48, 0, blockdata); // data class 48 - "data"
     
+    patchval = GG_BM_NOMV;
+    blockdata[1] = patchval & 0xFF;
+    blockdata[0] = (patchval >> 8) & 0xFF;
+    
+    compute_checksum(blockdata);
+    
+    i2cAcquireBus(driver);
+    // commit the new data and checksum
+    for( i = 0; i < 33; i++ ) {
+      gg_set_byte( GG_EXT_BLKDATABSE + i, blockdata[i] );
+    }
+    i2cReleaseBus(driver);
+    chprintf( stream, "ggUpdate: also updated nominal voltage\n\r");
 } else {
     chprintf( stream, "ggUpdate: Seems we are already updated, skipping update & sealing...\n\r" );
     i2cAcquireBus(driver);
