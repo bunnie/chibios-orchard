@@ -536,7 +536,7 @@ void ggCheckUpdate(uint8_t forceUpdate) {
     }
     
     /////////////// fix the capacity and energy settings...
-    dumpSubClass(0x52, 0, blockdata);  // subclass 82
+    dumpSubClass(82, 0, blockdata);  // subclass 82
     
     designCapacity = GG_BM_CAPACITY;
     designEnergy = GG_BM_ENERGY;
@@ -588,7 +588,7 @@ void ggCheckUpdate(uint8_t forceUpdate) {
     chprintf( stream, "ggUpdate: also restored cal data to default\n\r");
 
     ///////////// also update/fix QMAX change limits and simulation parameters
-    dumpSubClass(80, 0, blockdata); // data class 80 - IT Cfg
+    dumpSubClass(80, 1, blockdata); // data class 80 - IT Cfg
 
     blockdata[45-32] = 100; // allow a larger qmax change
     blockdata[46-32] = 50; // allow a larger %age of design capacity change in qmax
@@ -613,7 +613,7 @@ void ggCheckUpdate(uint8_t forceUpdate) {
     chprintf( stream, "ggUpdate: also updated delta QMAX and sim parameters\n\r");
     
     ////////////// also pre-load avg current run/power #s and delta voltage
-    dumpSubClass(80, 1, blockdata); // data class 80 - IT Cfg, offset 1
+    dumpSubClass(82, 1, blockdata); // data class 80 - IT Cfg, offset 1
 
     patchval = 2; // use a 2mV deltaV
     blockdata[40-32] = patchval & 0xFF;
