@@ -40,6 +40,10 @@ void configToggleAutosex(void) {
   config_cache.cfg_autosex = !config_cache.cfg_autosex;
 }
 
+void configGgPatched(void) {
+  config_cache.gg_hotfix = 1;
+}
+
 void configFlush(void) {
   storagePatchData(CONFIG_BLOCK, (uint32_t *) &config_cache, CONFIG_OFFSET, sizeof(struct userconfig));
 }
@@ -62,6 +66,7 @@ static void init_config(uint32_t block) {
   config.sex_initiations = 0;
   config.sex_responses = 0;
   config.cfg_autosex = 0;   // deny rapid breeding by default
+  config.gg_hotfix = 0xFFFFFFFF;
 
   storagePatchData(block, (uint32_t *) &config, CONFIG_OFFSET, sizeof(struct userconfig));
 }
