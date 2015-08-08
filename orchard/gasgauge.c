@@ -437,7 +437,7 @@ void dumpSubClass(uint8_t subclass, uint8_t offset, uint8_t *blockdata) {
 
 #define GG_BM_CAPACITY 4000   // 4000 mAh
 #define GG_BM_ENERGY 14800    // 4000 mAh * 3.7V = 14800 mWh
-#define GG_BM_TERMV  3000     // 3.00V stop voltage -- manual says "abs min"
+#define GG_BM_TERMV  3150     // 3.15V stop voltage -- manual says "abs min"
 #define GG_BM_TAPER  105      // set for a shy less than 400mA charge term
 // per quickstart taper rate = design capacity / (0.1 * taper current)
 // taper current = 300mA * 15%. so, 4000 / (0.1 * 345) = 114
