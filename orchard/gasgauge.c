@@ -619,11 +619,11 @@ void ggCheckUpdate(uint8_t forceUpdate) {
     blockdata[46-32] = 50; // allow a larger %age of design capacity change in qmax
     blockdata[47-32] = 150; // seems our batteries have larger capacities than printed on the case
 
-    patchval = 200; // use a 200mA discharge rate for simulation
+    patchval = -200; // use a 200mA discharge rate for simulation
     blockdata[53-32] = patchval & 0xFF;
     blockdata[52-32] = (patchval >> 8) & 0xFF;
 
-    patchval = 740; // use a 740 mWh discharge power for simulation 
+    patchval = -740; // use a 740 mWh discharge power for simulation 
     blockdata[55-32] = patchval & 0xFF;
     blockdata[54-32] = (patchval >> 8) & 0xFF;
     
