@@ -457,6 +457,31 @@ void ggCheckUpdate(uint8_t forceUpdate) {
   uint8_t timeout = 0;
   char uistr[32];
   int16_t patchval;
+  uint8_t fullReset = 0;
+  const struct userconfig *config;
+  
+  config = getConfig();
+  if( config->gg_hotfix != 1 ) {
+    fullReset = 1;
+    forceUpdate = 1;
+    configGgPatched();
+    configFlush();
+  }
+
+  if( fullReset ) {
+    i2cAcquireBus(driver);
+    // unseal the device by writing the unseal command twice
+    gg_set(GG_CMD_CNTL, GG_CODE_UNSEAL);
+    gg_set(GG_CMD_CNTL, GG_CODE_UNSEAL);
+
+    gg_set( GG_CMD_CNTL, GG_CODE_HARDRESET ); 
+    
+    // seal up the gas gauge
+    gg_set( GG_CMD_CNTL, GG_CODE_SEAL ); 
+    i2cReleaseBus(driver);
+
+    orchardTestPrompt("gasgauge reset", "please standby", -5);
+  }
 
   i2cAcquireBus(driver);
   // unseal the device by writing the unseal command twice
