@@ -2,6 +2,7 @@
 #define CONFIG_BLOCK      1
 #define CONFIG_OFFSET     0
 #define CONFIG_VERSION    2
+#define CONFIG_GGHOTFIX_VERSION 2  // inc this to patch up gas gauges with newer changes
 
 typedef struct userconfig {
   uint32_t  signature;

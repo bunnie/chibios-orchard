@@ -16,6 +16,12 @@
 
 void cmd_ggdump(BaseSequentialStream *chp, int argc, char *argv[]);
 
+// Ra table from 'golden cell' 8/12/15 16:34 SGT
+static int16_t Ra[15] = { 225, 225, 227, 251,
+			  188, 174, 206, 232,
+			  212, 196, 250, 293,
+			  586, 1534, 2447 };
+
 static I2CDriver *driver;
 
 static void gg_set(uint8_t cmdcode, int16_t val) {
@@ -445,7 +451,7 @@ void dumpSubClass(uint8_t subclass, uint8_t offset, uint8_t *blockdata) {
 
 #define GG_BM_QMAX_MAX 25000  // roughly 50% over nominal max charge
 #define GG_BM_QMAX_MIN 1700   // roughly 10% of original capacity -- we're def. not doing well
-#define GG_BM_QMAX_NOM 16384  // default qmax
+#define GG_BM_QMAX_NOM 16515  // default qmax
 #define GG_BM_NOMV 3700  // design nominal voltage
 
 void ggCheckUpdate(uint8_t forceUpdate) {
@@ -462,7 +468,7 @@ void ggCheckUpdate(uint8_t forceUpdate) {
   const struct userconfig *config;
   
   config = getConfig();
-  if( config->gg_hotfix != 1 ) {
+  if( config->gg_hotfix != CONFIG_GGHOTFIX_VERSION ) {
     fullReset = 1;
     forceUpdate = 1;
     configGgPatched();
@@ -620,7 +626,7 @@ void ggCheckUpdate(uint8_t forceUpdate) {
     ///////////// also update/fix QMAX change limits and simulation parameters
     dumpSubClass(80, 1, blockdata); // data class 80 - IT Cfg
 
-    blockdata[45-32] = 100; // allow a larger qmax change
+    blockdata[45-32] = 50; // allow a larger qmax change
     blockdata[46-32] = 50; // allow a larger %age of design capacity change in qmax
     blockdata[47-32] = 150; // seems our batteries have larger capacities than printed on the case
 
@@ -649,6 +655,11 @@ void ggCheckUpdate(uint8_t forceUpdate) {
     blockdata[40-32] = patchval & 0xFF;
     blockdata[39-32] = (patchval >> 8) & 0xFF;
 
+    // GDK pack shows 4181mV, real pack shows 4152mV
+    patchval = 4180;
+    blockdata[34-32] = patchval & 0xFF;
+    blockdata[33-32] = (patchval >> 8) & 0xFF;
+    
     // -125mAh average discharge = 4000/(-125 * 0.1) = -320
     patchval = -320;
     blockdata[36-32] = patchval & 0xFF;
@@ -706,6 +717,10 @@ void ggCheckUpdate(uint8_t forceUpdate) {
     patchval = GG_BM_NOMV;
     blockdata[1] = patchval & 0xFF;
     blockdata[0] = (patchval >> 8) & 0xFF;
+
+    patchval = -1000; // initial max load is 1000mA -- when being used as a powerbank
+    blockdata[4] = patchval & 0xFF;
+    blockdata[3] = (patchval >> 8) & 0xFF;
     
     compute_checksum(blockdata);
     
@@ -716,6 +731,26 @@ void ggCheckUpdate(uint8_t forceUpdate) {
     }
     i2cReleaseBus(driver);
     chprintf( stream, "ggUpdate: also updated nominal voltage\n\r");
+
+    ////////////// also set Ra tables
+    dumpSubClass(89, 0, blockdata); // data class 89 - "Ra"
+
+    for( i = 0; i < 15; i++ ) {
+      patchval = Ra[i];
+      blockdata[i*2+1] = patchval & 0xFF;
+      blockdata[i*2+0] = (patchval >> 8) & 0xFF;
+    }
+    
+    compute_checksum(blockdata);
+    
+    i2cAcquireBus(driver);
+    // commit the new data and checksum
+    for( i = 0; i < 33; i++ ) {
+      gg_set_byte( GG_EXT_BLKDATABSE + i, blockdata[i] );
+    }
+    i2cReleaseBus(driver);
+    chprintf( stream, "ggUpdate: also updated Ra table\n\r");
+    
 } else {
     chprintf( stream, "ggUpdate: Seems we are already updated, skipping update & sealing...\n\r" );
     i2cAcquireBus(driver);
@@ -929,6 +964,8 @@ void cmd_ggpeek(BaseSequentialStream *chp, int argc, char *argv[]) {
 
   chprintf(chp, "\n\rsub %d block %d as int16:", subclass, block);
   printBlock(blockdata);
+  chprintf(chp, "\n\rsub %d block %d as int16 odd offset:", subclass, block);
+  printBlockOdd(blockdata);
   chprintf(chp, "\n\rsub %d block %d as uint8:", subclass, block);
   printBlock8(blockdata);
 

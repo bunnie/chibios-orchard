@@ -41,7 +41,7 @@ void configToggleAutosex(void) {
 }
 
 void configGgPatched(void) {
-  config_cache.gg_hotfix = 1;
+  config_cache.gg_hotfix = CONFIG_GGHOTFIX_VERSION;
 }
 
 void configFlush(void) {
